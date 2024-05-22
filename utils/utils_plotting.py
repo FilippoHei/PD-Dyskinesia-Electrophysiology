@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import matplotlib.patches as mpatches
+from scipy.signal import spectrogram
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 LABEL_SIZE       = 5
 LABEL_SIZE_label = 6 
@@ -18,20 +20,20 @@ colors["voluntary_tapping"]            = {}
 colors["involuntary_tapping"]          = {}
 colors["involuntary_movement"]         = {}
 
-colors["voluntary_tapping"]["dys0"]    = "#12F1D7"
-colors["voluntary_tapping"]["dys1"]    = "#00B982"
-colors["voluntary_tapping"]["dys2"]    = "#02483C"
-colors["voluntary_tapping"]["dys3"]    = "#00140F"
+colors["voluntary_tapping"]["LID_no"]          = "#12F1D7"
+colors["voluntary_tapping"]["LID_mild"]        = "#00B982"
+colors["voluntary_tapping"]["LID_moderate"]    = "#02483C"
+colors["voluntary_tapping"]["LID_severe"]      = "#00140F"
 
-colors["involuntary_tapping"]["dys0"]  = "#C70098"
-colors["involuntary_tapping"]["dys1"]  = "#8100CC"
-colors["involuntary_tapping"]["dys2"]  = "#2E0074"
-colors["involuntary_tapping"]["dys3"]  = "#020028"
+colors["involuntary_tapping"]["LID_no"]        = "#C70098"
+colors["involuntary_tapping"]["LID_mild"]      = "#8100CC"
+colors["involuntary_tapping"]["LID_moderate"]  = "#2E0074"
+colors["involuntary_tapping"]["LID_severe"]    = "#020028"
 
-colors["involuntary_movement"]["dys0"] = "#FFC31F"
-colors["involuntary_movement"]["dys1"] = "#CC6D00"
-colors["involuntary_movement"]["dys2"] = "#B50021"
-colors["involuntary_movement"]["dys3"] = "#52000F"
+colors["involuntary_movement"]["LID_no"]       = "#FFC31F"
+colors["involuntary_movement"]["LID_mild"]     = "#CC6D00"
+colors["involuntary_movement"]["LID_moderate"] = "#B50021"
+colors["involuntary_movement"]["LID_severe"]   = "#52000F"
 
 def get_figure_template():
     
@@ -109,36 +111,68 @@ def plot_accelerometer_events_by_dyskinesia(accelerometer_events, kinematics, ev
     ax6  = plt.subplot2grid((75, 45), (50, 25) , colspan=20, rowspan=20)
 
     # onset aligned
-    plot_accelerometer_events(accelerometer_events[event_category]["dys0"]["onset"]["X"], kinematics.fs, axis=ax1, color=colors[event_category]["dys0"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys1"]["onset"]["X"], kinematics.fs, axis=ax1, color=colors[event_category]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys2"]["onset"]["X"], kinematics.fs, axis=ax1, color=colors[event_category]["dys2"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys3"]["onset"]["X"], kinematics.fs, axis=ax1, color=colors[event_category]["dys3"], padding_for="onset")
-    
-    plot_accelerometer_events(accelerometer_events[event_category]["dys0"]["onset"]["Y"], kinematics.fs, axis=ax2, color=colors[event_category]["dys0"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys1"]["onset"]["Y"], kinematics.fs, axis=ax2, color=colors[event_category]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys2"]["onset"]["Y"], kinematics.fs, axis=ax2, color=colors[event_category]["dys2"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys3"]["onset"]["Y"], kinematics.fs, axis=ax2, color=colors[event_category]["dys3"], padding_for="onset")
-  
-    plot_accelerometer_events(accelerometer_events[event_category]["dys0"]["onset"]["Z"], kinematics.fs, axis=ax3, color=colors[event_category]["dys0"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys1"]["onset"]["Z"], kinematics.fs, axis=ax3, color=colors[event_category]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys2"]["onset"]["Z"], kinematics.fs, axis=ax3, color=colors[event_category]["dys2"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys3"]["onset"]["Z"], kinematics.fs, axis=ax3, color=colors[event_category]["dys3"], padding_for="onset")
+
+    # X axis
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_no"]["onset"]["X"], 
+                              kinematics.fs, axis=ax1, color=colors[event_category]["LID_no"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_mild"]["onset"]["X"], 
+                              kinematics.fs, axis=ax1, color=colors[event_category]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_moderate"]["onset"]["X"], 
+                              kinematics.fs, axis=ax1, color=colors[event_category]["LID_moderate"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_severe"]["onset"]["X"], 
+                              kinematics.fs, axis=ax1, color=colors[event_category]["LID_severe"], padding_for="onset")
+
+    # Y axis
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_no"]["onset"]["Y"], 
+                              kinematics.fs, axis=ax2, color=colors[event_category]["LID_no"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_mild"]["onset"]["Y"],
+                              kinematics.fs, axis=ax2, color=colors[event_category]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_moderate"]["onset"]["Y"],
+                              kinematics.fs, axis=ax2, color=colors[event_category]["LID_moderate"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_severe"]["onset"]["Y"], 
+                              kinematics.fs, axis=ax2, color=colors[event_category]["LID_severe"], padding_for="onset")
+
+    # Z axis
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_no"]["onset"]["Z"], 
+                              kinematics.fs, axis=ax3, color=colors[event_category]["LID_no"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_mild"]["onset"]["Z"], 
+                              kinematics.fs, axis=ax3, color=colors[event_category]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_moderate"]["onset"]["Z"], 
+                              kinematics.fs, axis=ax3, color=colors[event_category]["LID_moderate"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_severe"]["onset"]["Z"], 
+                              kinematics.fs, axis=ax3, color=colors[event_category]["LID_severe"], padding_for="onset")
   
     # offset aligned
-    plot_accelerometer_events(accelerometer_events[event_category]["dys0"]["offset"]["X"], kinematics.fs, axis=ax4, color=colors[event_category]["dys0"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys1"]["offset"]["X"], kinematics.fs, axis=ax4, color=colors[event_category]["dys1"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys2"]["offset"]["X"], kinematics.fs, axis=ax4, color=colors[event_category]["dys2"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys3"]["offset"]["X"], kinematics.fs, axis=ax4, color=colors[event_category]["dys3"], padding_for="offset")
-    
-    plot_accelerometer_events(accelerometer_events[event_category]["dys0"]["offset"]["Y"], kinematics.fs, axis=ax5, color=colors[event_category]["dys0"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys1"]["offset"]["Y"], kinematics.fs, axis=ax5, color=colors[event_category]["dys1"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys2"]["offset"]["Y"], kinematics.fs, axis=ax5, color=colors[event_category]["dys2"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys3"]["offset"]["Y"], kinematics.fs, axis=ax5, color=colors[event_category]["dys3"], padding_for="offset")
-  
-    plot_accelerometer_events(accelerometer_events[event_category]["dys0"]["offset"]["Z"], kinematics.fs, axis=ax6, color=colors[event_category]["dys0"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys1"]["offset"]["Z"], kinematics.fs, axis=ax6, color=colors[event_category]["dys1"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys2"]["offset"]["Z"], kinematics.fs, axis=ax6, color=colors[event_category]["dys2"], padding_for="offset")
-    plot_accelerometer_events(accelerometer_events[event_category]["dys3"]["offset"]["Z"], kinematics.fs, axis=ax6, color=colors[event_category]["dys3"], padding_for="offset")
+
+    # X axis
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_no"]["offset"]["X"], 
+                              kinematics.fs, axis=ax4, color=colors[event_category]["LID_no"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_mild"]["offset"]["X"], 
+                              kinematics.fs, axis=ax4, color=colors[event_category]["LID_mild"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_moderate"]["offset"]["X"], 
+                              kinematics.fs, axis=ax4, color=colors[event_category]["LID_moderate"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_severe"]["offset"]["X"], 
+                              kinematics.fs, axis=ax4, color=colors[event_category]["LID_severe"], padding_for="offset")
+
+    # Y axis
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_no"]["offset"]["Y"], 
+                              kinematics.fs, axis=ax5, color=colors[event_category]["LID_no"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_mild"]["offset"]["Y"], 
+                              kinematics.fs, axis=ax5, color=colors[event_category]["LID_mild"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_moderate"]["offset"]["Y"], 
+                              kinematics.fs, axis=ax5, color=colors[event_category]["LID_moderate"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_severe"]["offset"]["Y"], 
+                              kinematics.fs, axis=ax5, color=colors[event_category]["LID_severe"], padding_for="offset")
+
+    # Z axis
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_no"]["offset"]["Z"], 
+                              kinematics.fs, axis=ax6, color=colors[event_category]["LID_no"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_mild"]["offset"]["Z"], 
+                              kinematics.fs, axis=ax6, color=colors[event_category]["LID_mild"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_moderate"]["offset"]["Z"], 
+                              kinematics.fs, axis=ax6, color=colors[event_category]["LID_moderate"], padding_for="offset")
+    plot_accelerometer_events(accelerometer_events[event_category]["LID_severe"]["offset"]["Z"], 
+                              kinematics.fs, axis=ax6, color=colors[event_category]["LID_severe"], padding_for="offset")
     
     ax1.set_ylabel("Accelerometer X Axis", fontsize=LABEL_SIZE_title)
     ax2.set_ylabel("Accelerometer Y Axis", fontsize=LABEL_SIZE_title)
@@ -181,11 +215,11 @@ def plot_accelerometer_events_by_dyskinesia(accelerometer_events, kinematics, ev
     ax4.set_title("Offset Aligned", fontsize= LABEL_SIZE_label, weight="bold")
 
     # add legend
-    c_dys0 = mpatches.Patch(color=colors[event_category]["dys0"], label='dys=0')
-    c_dys1 = mpatches.Patch(color=colors[event_category]["dys1"], label='dys=1')
-    c_dys2 = mpatches.Patch(color=colors[event_category]["dys2"], label='dys=2')
-    c_dys3 = mpatches.Patch(color=colors[event_category]["dys3"], label='dys=3')
-    ax5.legend(handles=[c_dys0, c_dys1, c_dys2, c_dys3], prop={'size': LABEL_SIZE_title}, loc='center left', bbox_to_anchor=(1, 0.5))
+    c_LID_no = mpatches.Patch(color=colors[event_category]["LID_no"], label='LID no')
+    c_LID_mild = mpatches.Patch(color=colors[event_category]["LID_mild"], label='LID mild')
+    c_LID_moderate = mpatches.Patch(color=colors[event_category]["LID_moderate"], label='LID moderate')
+    c_LID_severe = mpatches.Patch(color=colors[event_category]["LID_severe"], label='LID severe')
+    ax5.legend(handles=[c_LID_no, c_LID_mild, c_LID_moderate, c_LID_severe], prop={'size': LABEL_SIZE_title}, loc='center left', bbox_to_anchor=(1, 0.5))
     
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
@@ -207,19 +241,19 @@ def plot_accelerometer_events_by_category(accelerometer_events, kinematics, colo
 
     # onset aligned
     cat  = "voluntary_tapping"
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["X"], kinematics.fs, axis=ax1, color=colors[cat]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Y"], kinematics.fs, axis=ax2, color=colors[cat]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Z"], kinematics.fs, axis=ax3, color=colors[cat]["dys1"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["X"], kinematics.fs, axis=ax1, color=colors[cat]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Y"], kinematics.fs, axis=ax2, color=colors[cat]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Z"], kinematics.fs, axis=ax3, color=colors[cat]["LID_mild"], padding_for="onset")
 
     cat  = "involuntary_tapping"
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["X"], kinematics.fs, axis=ax4, color=colors[cat]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Y"], kinematics.fs, axis=ax5, color=colors[cat]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Z"], kinematics.fs, axis=ax6, color=colors[cat]["dys1"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["X"], kinematics.fs, axis=ax4, color=colors[cat]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Y"], kinematics.fs, axis=ax5, color=colors[cat]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Z"], kinematics.fs, axis=ax6, color=colors[cat]["LID_mild"], padding_for="onset")
     
     cat  = "involuntary_movement"
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["X"], kinematics.fs, axis=ax7, color=colors[cat]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Y"], kinematics.fs, axis=ax8, color=colors[cat]["dys1"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Z"], kinematics.fs, axis=ax9, color=colors[cat]["dys1"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["X"], kinematics.fs, axis=ax7, color=colors[cat]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Y"], kinematics.fs, axis=ax8, color=colors[cat]["LID_mild"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"]["Z"], kinematics.fs, axis=ax9, color=colors[cat]["LID_mild"], padding_for="onset")
 
     set_axis(ax1)
     set_axis(ax2)
@@ -277,3 +311,96 @@ def plot_accelerometer_events_by_category(accelerometer_events, kinematics, colo
     
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
+
+def plot_single_event_and_spectogram(event, time_vector, fs, alignment):
+
+    event = np.array(event)
+    
+    plt  = get_figure_template()
+    ax1  = plt.subplot2grid((75, 40), (0, 0) , colspan=30, rowspan=10)
+    ax2  = plt.subplot2grid((75, 40), (12, 0) , colspan=30, rowspan=20)
+
+    # plot event
+    ax1.plot(time_vector, event)
+    ax1.set_yticklabels([])
+    ax1.set_xticklabels([])
+
+    # plot spectogram
+    f, t, Sxx = spectrogram(event, fs=fs, nperseg=int(fs/10))
+    Sxx       = 10 * np.log10(Sxx) # 'Power/Frequency (dB/Hz)'
+
+    if(alignment=="onset"):
+        time_vec_spectogram = t - 1
+        cax = ax2.pcolormesh(time_vec_spectogram, f, Sxx, shading='gouraud')
+        ax1.set_xlim([-1,(len(event)/fs)-1])
+        ax2.set_xlim([-1,(len(event)/fs)-1])
+    else:
+        time_vec_spectogram = (t - max(t)) + 1
+        cax = ax2.pcolormesh(time_vec_spectogram, f, Sxx, shading='gouraud')
+        ax1.set_xlim([1-(len(event)/fs),1])
+        ax2.set_xlim([1-(len(event)/fs),1])
+        
+    ax1.axvline(x=0, ymin=-1, ymax=1, ls='-', color="dimgrey")
+    ax2.axvline(x=0, ymin=-1, ymax=1, ls='-', color="white")
+    ax1.text(-0.1, ax1.get_ylim()[1]*1.1, 'offset', c="k", fontsize = LABEL_SIZE)
+    
+    # Add the colorbar to the new axis
+    divider = make_axes_locatable(ax2)
+    cbar_ax = divider.append_axes("bottom", size="5%", pad=0.5)
+    cbar = plt.colorbar(cax, cax=cbar_ax, orientation='horizontal')
+    cbar.set_label('Power/Frequency (dB/Hz)', fontsize=LABEL_SIZE)
+    cbar.ax.tick_params(labelsize=LABEL_SIZE)
+
+    ax2.set_ylabel('Frequency [Hz]')
+    ax2.set_xlabel('Time [s]')
+    set_axis(ax1)
+    set_axis(ax2)
+    ax2.set_ylim([0,100])
+
+def plot_average_spectogram_for_event(event_array, time_vector, fs, alignment, color):
+
+    plt  = get_figure_template()
+    ax1  = plt.subplot2grid((75, 40), (0, 0) , colspan=30, rowspan=10)
+    ax2  = plt.subplot2grid((75, 40), (12, 0) , colspan=30, rowspan=20)
+
+    # plot event
+    ax1  = plot_accelerometer_events(event_array, fs, axis=ax1, color=color, padding_for=alignment)
+    ax1.set_yticklabels([])
+    ax1.set_xticklabels([])
+
+    # measure average power spectrum
+    Sxx_array = []
+    for i in range(len(event_array)):
+        event     = np.array(event_array[i])
+        f, t, Sxx = spectrogram(event, fs=fs, nperseg=int(fs/10))
+        Sxx       = 10 * np.log10(Sxx) # 'Power/Frequency (dB/Hz)'     
+        Sxx_array.append(Sxx)
+    avg_Sxx = np.average(Sxx_array,axis=0)
+
+    if(alignment=="onset"):
+        time_vec_spectogram = t - 1
+        cax = ax2.pcolormesh(time_vec_spectogram, f, avg_Sxx, shading='gouraud')
+        ax1.set_xlim([-1,(len(event)/fs)-1])
+        ax2.set_xlim([-1,(len(event)/fs)-1])
+    else:
+        time_vec_spectogram = (t - max(t)) + 1
+        cax = ax2.pcolormesh(time_vec_spectogram, f, avg_Sxx, shading='gouraud')
+        ax1.set_xlim([1-(len(event)/fs),1])
+        ax2.set_xlim([1-(len(event)/fs),1])
+        
+    ax1.axvline(x=0, ymin=-1, ymax=1, ls='-', color="dimgrey")
+    ax2.axvline(x=0, ymin=-1, ymax=1, ls='-', color="white")
+    ax1.text(-0.1, ax1.get_ylim()[1]*1.1, 'offset', c="k", fontsize = LABEL_SIZE)
+
+    # Add the colorbar to the new axis
+    divider = make_axes_locatable(ax2)
+    cbar_ax = divider.append_axes("bottom", size="5%", pad=0.5)
+    cbar = plt.colorbar(cax, cax=cbar_ax, orientation='horizontal')
+    cbar.set_label('Power/Frequency (dB/Hz)', fontsize=LABEL_SIZE)
+    cbar.ax.tick_params(labelsize=LABEL_SIZE)
+    
+    ax2.set_ylabel('Frequency [Hz]')
+    ax2.set_xlabel('Time [s]')
+    set_axis(ax1)
+    set_axis(ax2)
+    ax2.set_ylim([0,100])

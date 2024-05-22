@@ -6,7 +6,8 @@ import json
 from utils.utils_fileManagement import load_class_pickle, mergedData
 
 from lib_data import DATA_IO
-        
+import utils_accelerometer
+
 ###############################################################################################################################################################
 ###############################################################################################################################################################
 ###############################################################################################################################################################
@@ -349,8 +350,7 @@ class KINEMATIC_DATA:
         self.ACC_L_Y = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Y')]
         self.ACC_L_Z = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Z')]
 
-    def extract_accelerometer_events(self, event_dataset, hemisphere="", event_type="", event_category="", dyskinesia_score="", alignment="onset"):
-
+    def extract_event_segment(self, event_dataset, hemisphere="", event_type="", event_category="", dyskinesia_score="", segment="event"):
         fs             = self.fs
         
         if(hemisphere!=""):
@@ -363,10 +363,10 @@ class KINEMATIC_DATA:
 
         if(event_category!=""): 
             # check if the event category is valid
-            assert event_category in event_dataset.event_category.unique().tolist(), f'Please enter valid event category, not ({alignment})'
-            
-        # check if event alignment strategy is valid
-        assert alignment in ["onset", "offset"], f'Please choose alignment as "onset", "offset"'
+            assert event_category in event_dataset.event_category.unique().tolist(), f'Please enter valid event category, not ({event_category})'
+
+        # check if segment is valid
+        assert segment in ["pre", "event", "post"], f'Please choose segment as "pre", "event", or "post"'
        
         #################################################################################################################################
         dataset = event_dataset[event_dataset['hemisphere']==hemisphere] if hemisphere != "" else event_dataset # select hemisphere
@@ -379,18 +379,24 @@ class KINEMATIC_DATA:
         acc_x = []
         acc_y = []
         acc_z = []
-    
+
         # iterate across dataframe rows
         for _, row in dataset.iterrows():
-    
-            # If events aligned based on their onset
-            if(alignment=="onset"):
-                start_index    = row['event_start_index'] - fs  # 1 sec before event onset
-                finish_index   = row['event_finish_index']      # event offset
-            # If events aligned based on their offset
-            else:
-                start_index    = row['event_start_index']       # event onset
-                finish_index   = row['event_finish_index'] + fs # 1 sec after event offset
+
+            # get pre-event activity
+            if(segment=="pre"):
+                start_index    = row['event_start_index'] - fs    # 1 sec before event onset
+                finish_index   = row['event_start_index']         # event onset
+                
+            # get event activity
+            elif(segment=="event"):
+                start_index    = row['event_start_index']         # event onset
+                finish_index   = row['event_finish_index']        # event offset
+
+            # get event activity
+            elif(segment=="post"):
+                start_index    = row['event_finish_index']        # event offset
+                finish_index   = row['event_finish_index'] + fs   # 1 sec after event offset
     
             # get hemisphere information
             hemisphere     = row['hemisphere']
@@ -415,8 +421,150 @@ class KINEMATIC_DATA:
         acc_events["Z"] = acc_z
         
         return acc_events
+                                   
+    def extract_accelerometer_events(self, event_dataset, hemisphere="", event_type="", event_category="", dyskinesia_score="", alignment="onset", t_observation=4):
+
+        fs             = self.fs
+        
+        if(hemisphere!=""):
+            # check if the selected hemisphere is valid
+            assert hemisphere in ["right", "left", "bilateral"], f'Please choose hemisphere as "right", "left", "bilateral"'
             
+        if(event_type!=""):
+            # check if the selected event type is valid
+            assert event_category in event_dataset.event.unique().tolist(), f'Please enter valid event type as "move", "tap"'
+
+        if(event_category!=""): 
+            # check if the event category is valid
+            assert event_category in event_dataset.event_category.unique().tolist(), f'Please enter valid event category, not ({event_category})'
             
+        # check if event alignment strategy is valid
+        assert alignment in ["onset", "offset"], f'Please choose alignment as "onset", "offset"'
+       
+        #################################################################################################################################
+        dataset = event_dataset[event_dataset['hemisphere']==hemisphere] if hemisphere != "" else event_dataset # select hemisphere
+        dataset = dataset[dataset['event']==event_type] if event_type != "" else dataset                        # select event type
+        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset       # select event category
+        dataset = dataset[dataset['dyskinesia_score']==dyskinesia_score] if dyskinesia_score != "" else dataset # select dyskinesia score
+        #################################################################################################################################
+        
+        # create empty arrays for storing accelerometer data for selected event category
+        acc_x = []
+        acc_y = []
+        acc_z = []
+    
+        # iterate across dataframe rows
+        for _, row in dataset.iterrows():
+    
+            # If events aligned based on their onset
+            if(alignment=="onset"):
+                start_index    = row['event_start_index'] - fs           # 1 sec before event onset
+                finish_index   = start_index + (t_observation * fs)      # t_observation sec later
+                
+            # If events aligned based on their offset
+            else:
+                finish_index   = row['event_finish_index'] + fs          # 1 sec after event offset
+                start_index    = finish_index - (t_observation * fs)     # t_observation sec before
+    
+            # get hemisphere information
+            hemisphere     = row['hemisphere']
+            
+            if(hemisphere == "right"):
+                acc_data_x = self.ACC_R_X[start_index:finish_index].tolist()
+                acc_data_y = self.ACC_R_Y[start_index:finish_index].tolist()
+                acc_data_z = self.ACC_R_Z[start_index:finish_index].tolist()
+            else:
+                acc_data_x = self.ACC_L_X[start_index:finish_index].tolist()
+                acc_data_y = self.ACC_L_Y[start_index:finish_index].tolist()
+                acc_data_z = self.ACC_L_Z[start_index:finish_index].tolist()
+            
+            acc_x.append(acc_data_x)
+            acc_y.append(acc_data_y)
+            acc_z.append(acc_data_z)
+
+        # store selected events in 3 axis of accelerometer data into a dictionary file
+        acc_events      = {}
+        acc_events["X"] = acc_x
+        acc_events["Y"] = acc_y
+        acc_events["Z"] = acc_z
+        
+        return acc_events
+
+    def create_event_segment_dictionary(self, dataset, fs, segment):
+    
+        acc_events = {}
+    
+        # loop in event categories
+        for event_category in dataset.event_category.unique().tolist():
+            acc_events[event_category] = {}
+    
+            # loop in dyskinesia severity
+            for severity in ["no","mild","moderate","severe"]:
+                events = self.extract_event_segment(dataset, event_category=event_category, dyskinesia_score=utils_accelerometer.dyskinesia_severity[severity],segment=segment)
+                acc_events[event_category]["LID_"+severity] = events
+                    
+        return acc_events
+
+    def __measure_temporal_metrics(self, dataframe, data, patient, event_category, dyskinesia_severity, axis, segment):
+        
+        data                             = np.array(data)
+        
+        metrics                          = {}
+        metrics["patient"]               = patient
+        metrics["event_category"]        = event_category
+        metrics["dyskinesia_severity"]   = dyskinesia_severity
+        metrics["acc_axis"]              = axis
+        metrics["event_segment"]         = segment
+        
+        metrics["mean"]                  = np.mean(data)
+        metrics["std"]                   = np.std(data)
+        metrics["RMS"]                   = np.sqrt(np.mean(data**2))
+        metrics["range"]                 = np.ptp(data)
+        metrics["median"]                = np.median(data)
+        metrics["iqr"]                   = np.percentile(data, 75) - np.percentile(data, 25)
+        metrics["positive_peak"]         = np.max(data)
+        metrics["negative_peak"]         = np.min(data)
+        metrics["zero_crossing_rate"]    = np.sum(np.diff(np.sign(data)) != 0)
+        metrics["mean_crossing_rate"]    = np.sum(np.diff(np.sign(data - np.mean(data))) != 0)
+        metrics["signal_energy"]         = np.sum(data**2)
+        metrics["signal_magnitude_area"] = np.sum(np.abs(data))                              # signal magnitude area: sum of the absolute values
+        metrics["crest_factor"]          = np.max(np.abs(data)) / np.sqrt(np.mean(data**2))  # ratio of the peak value to the RMS value.
+        metrics["impulse_factor"]        = np.max(np.abs(data)) / np.mean(np.abs(data))      # ratio of the peak value to the mean value.
+        metrics["shape_factor"]          = np.sqrt(np.mean(data**2)) / np.mean(np.abs(data)) # ratio of the RMS value to the mean value.
+        
+        # clearance factor: Ratio of the peak value to the RMS value of the mean absolute deviation
+        metrics["clearance_factor"]      = np.max(np.abs(data)) / np.mean(np.sqrt(np.abs(data - np.mean(data)))) 
+        
+        dataframe.loc[len(dataframe)]    = metrics
+        
+        return dataframe
+        
+    def extract_temporal_metrics_from_event_segments(self, patient, event_dataframe):
+        
+        df_metrics = pd.DataFrame(columns=["patient","event_category","dyskinesia_severity","acc_axis","event_segment",
+                                           'mean', 'std', 'RMS', 'range', 'median', 'iqr', 'positive_peak', 'negative_peak', 
+                                           'zero_crossing_rate', 'mean_crossing_rate', 'signal_energy', 'signal_magnitude_area', 
+                                           'crest_factor', 'impulse_factor', 'shape_factor', 'clearance_factor'])
+    
+        for segment in ["pre", "event", "post"]:
+            
+            event_segment_dict = self.create_event_segment_dictionary(event_dataframe, self.fs, segment=segment)
+        
+            for event_category in event_segment_dict.keys():
+                for dyskinesia_severity in ["LID_no", "LID_mild", "LID_moderate", "LID_severe"]:
+                    for axis in event_segment_dict[event_category][dyskinesia_severity].keys():
+                        event_segment_array = event_segment_dict[event_category][dyskinesia_severity][axis]
+                        if(len(event_segment_array)!=0):
+                            for i in range(len(event_segment_array)):
+                                even_segment = event_segment_array[i]
+                                df_metrics   = self.__measure_temporal_metrics(df_metrics, even_segment, patient, event_category, dyskinesia_severity, axis, segment)
+
+        metric_list = ['mean', 'std', 'RMS', 'range', 'median', 'iqr', 'positive_peak', 'negative_peak', 'zero_crossing_rate', 'mean_crossing_rate', 
+                       'signal_energy', 'signal_magnitude_area',  'crest_factor', 'impulse_factor', 'shape_factor', 'clearance_factor']
+        
+        return df_metrics, metric_list
+
+
 
 
 
