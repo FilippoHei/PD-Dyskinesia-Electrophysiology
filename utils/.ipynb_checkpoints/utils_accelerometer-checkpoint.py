@@ -10,6 +10,7 @@ dyskinesia_severity["no"]       = 0
 dyskinesia_severity["mild"]     = 1
 dyskinesia_severity["moderate"] = 2
 dyskinesia_severity["severe"]   = 3
+dyskinesia_severity["extreme"]  = 4
 
 def create_event_segment_dictionary(dataset, kinematics, fs, segment):
     
@@ -30,13 +31,13 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
     
     acc_events = {}
 
-    # loop in event categories
+    # loop in event categories (voluntary taps vs involuntary remaining movements)
     for event_category in dataset.event_category.unique().tolist():
         
         acc_events[event_category] = {}
 
         # loop in dyskinesia severity
-        for severity in ["","no","mild","moderate","severe"]:
+        for severity in ["","none","mild","moderate","severe","extreme"]:
 
             # if particular severity is not selected, consider all events
             if(severity != ""):
@@ -47,13 +48,8 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
                 for alignment in ["onset", "offset"]:
 
                     # get aligned event arrays for the selected combination
-                    events = kinematic.extract_accelerometer_events(dataset, event_category=event_category, dyskinesia_score=dyskinesia_severity[severity], 
+                    events = kinematic.extract_accelerometer_events(dataset, event_category=event_category, dyskinesia_score=severity, 
                                                                     alignment=alignment, t_observation=t_observation)
-
-                    # pad the arrays based on alignment strategy
-                    # events["X"] = pad_aligned_events(events["X"], fs=fs, padding_for=alignment)
-                    # events["Y"] = pad_aligned_events(events["Y"], fs=fs, padding_for=alignment)
-                    # events["Z"] = pad_aligned_events(events["Z"], fs=fs, padding_for=alignment)
                     acc_events[event_category]["LID_"+severity][alignment] = events
             else:
                 
@@ -65,10 +61,6 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
                     # get aligned event arrays for the selected combination
                     events      = kinematic.extract_accelerometer_events(dataset, event_category=event_category, alignment=alignment, t_observation=t_observation)
 
-                    # pad the arrays based on alignment strategy
-                    # events["X"] = pad_aligned_events(events["X"], fs=fs, padding_for=alignment)
-                    # events["Y"] = pad_aligned_events(events["Y"], fs=fs, padding_for=alignment)
-                    # events["Z"] = pad_aligned_events(events["Z"], fs=fs, padding_for=alignment)
                     acc_events[event_category]["all"][alignment] = events
                 
     return acc_events

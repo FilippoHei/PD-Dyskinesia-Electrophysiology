@@ -50,7 +50,7 @@ class EVENTS:
         print("... task periods were defined")
         self.__define_events()
         print("... events were categorized")
-        self.get_dyskinetia_scores()
+        self.get_dyskinesia_scores()
         print("... dyskinesia evaluation was collected")
         print("... loading completed")
 
@@ -117,7 +117,7 @@ class EVENTS:
         self.right_involuntary_movements = self.__operator_event_difference(self.right_move, self.right_tap)
 
 
-    def get_dyskinetia_scores(self):
+    def get_dyskinesia_scores(self):
         """
         Description
             This method reads the Excel file containing the CDRS scores (right, left, total) of dyskinesia events and their corresponding timestamps included in different 
@@ -127,7 +127,7 @@ class EVENTS:
             evaluation is made.
             
         Output
-            :return: The definitions of dyskinesia scores in the right, left, and bilateral hemispheres were added as a field. It also returns a 
+            :return: The definitions of dyskinesia scores in the right, left, and bilateral side were added as a field. It also returns a 
                      Python dictionary with three fields:
                      - key: "CDRS_right", value: an integer array
                      - key: "CDRS_left", value: an integer array
@@ -140,35 +140,57 @@ class EVENTS:
 
         # read the Excell sheet for the given SUB into the dataframe
         CDRS = pd.read_excel(PATH_CDRS +"CDRS.xlsx", sheet_name="sub-"+self.__SUB)
-        CDRS = CDRS[['dopa_time','CDRS_total_right', 'CDRS_total_left', 'CDRS_total']]
+
+        CDRS = CDRS[['dopa_time','CDRS_face','CDRS_neck','CDRS_trunk',
+                     'CDRS_upper_right','CDRS_upper_left','CDRS_lower_right','CDRS_lower_left',
+                     'CDRS_total_right', 'CDRS_total_left', 'CDRS_total']]
+        
         CDRS.dropna(inplace=True)
 
         self.__CDRS_dataframe = CDRS
 
         
-        t_CDRS = CDRS.dopa_time.to_numpy()                  # get the timestamp of evaluation time (an array in minutes) 
-        score_right = CDRS["CDRS_total_right"].to_numpy()   # get right hemisphere dyskinesia scores (an array) 
-        score_left  = CDRS["CDRS_total_left"].to_numpy()    # get left hemisphere dyskinesia scores (an array) 
-        score_total = CDRS["CDRS_total"].to_numpy()         # get total dyskinesia scores (bilateral) (an array) 
+        t_CDRS      = CDRS.dopa_time.to_numpy()             # get the timestamp of evaluation time (an array in minutes) 
         
         # Find the indices where t_CDRS <= t
         # self.times / 60: to represent recording times in minutes instead of seconds
-        CDRS_times = np.searchsorted(CDRS.dopa_time, self.times / 60) # find the indices of evaluation times in the time array
-        CDRS_times = CDRS_times-1
+        CDRS_times       = np.searchsorted(CDRS.dopa_time, self.times / 60) # find the indices of evaluation times in the time array
+        CDRS_times       = CDRS_times-1
         
-        CDRS_left  = CDRS_times.copy()
-        CDRS_right = CDRS_times.copy()
-        CDRS_total = CDRS_times.copy()
-        
+        CDRS_face        = CDRS_times.copy()
+        CDRS_neck        = CDRS_times.copy()
+        CDRS_trunk       = CDRS_times.copy()
+        CDRS_upper_right = CDRS_times.copy()
+        CDRS_upper_left  = CDRS_times.copy()
+        CDRS_lower_right = CDRS_times.copy()
+        CDRS_lower_left  = CDRS_times.copy()
+        CDRS_total_right = CDRS_times.copy()
+        CDRS_total_left  = CDRS_times.copy()
+        CDRS_total       = CDRS_times.copy()
+
         for index in CDRS.index:
-            CDRS_left[CDRS_left==index]   = CDRS.iloc[index].CDRS_total_left
-            CDRS_right[CDRS_right==index] = CDRS.iloc[index].CDRS_total_right
-            CDRS_total[CDRS_total==index] = CDRS.iloc[index].CDRS_total
+            CDRS_face[CDRS_face==index]               = CDRS.iloc[index].CDRS_face
+            CDRS_neck[CDRS_neck==index]               = CDRS.iloc[index].CDRS_neck
+            CDRS_trunk[CDRS_trunk==index]             = CDRS.iloc[index].CDRS_trunk
+            CDRS_upper_right[CDRS_upper_right==index] = CDRS.iloc[index].CDRS_upper_right
+            CDRS_upper_left[CDRS_upper_left==index]   = CDRS.iloc[index].CDRS_upper_left
+            CDRS_lower_right[CDRS_lower_right==index] = CDRS.iloc[index].CDRS_lower_right
+            CDRS_lower_left[CDRS_lower_left==index]   = CDRS.iloc[index].CDRS_lower_left
+            CDRS_total_right[CDRS_total_right==index] = CDRS.iloc[index].CDRS_total_right
+            CDRS_total_left[CDRS_total_left==index]   = CDRS.iloc[index].CDRS_total_left
+            CDRS_total[CDRS_total==index]             = CDRS.iloc[index].CDRS_total
             
         # Take values at found indices
-        self.CDRS_right = CDRS_right
-        self.CDRS_left  = CDRS_left
-        self.CDRS_total = CDRS_total 
+        self.CDRS_face        = CDRS_face
+        self.CDRS_neck        = CDRS_neck
+        self.CDRS_trunk       = CDRS_trunk
+        self.CDRS_upper_right = CDRS_upper_right 
+        self.CDRS_upper_left  = CDRS_upper_left 
+        self.CDRS_lower_right = CDRS_lower_right 
+        self.CDRS_lower_left  = CDRS_lower_left 
+        self.CDRS_total_right = CDRS_total_right 
+        self.CDRS_total_left  = CDRS_total_left 
+        self.CDRS_total       = CDRS_total 
 
     def __get_event_indices(self, array):
         """
@@ -201,19 +223,19 @@ class EVENTS:
         
         return event_indices
 
-    def __populate_dataframe(self, dataset, patient, hemisphere, event_indices, event_type):
+    def __populate_dataframe(self, dataset, patient, laterality, event_indices, event_type):
 
         """
         Description
-            This method add a dataframe that contains all events detected for the given hemisphere of the patients. Initially, it acquires all the events contained 
+            This method add a dataframe that contains all events detected for the given side of the patients. Initially, it acquires all the events contained 
             in _tap and _move fields. The information regarding the task (tapping, free, rest), the category (voluntary tapping, involuntary tapping, involuntary movement),
             event start and finish timestamps, etc are stored in this dataframe.
 
         Input
-            :param dataset: A dataframe contains "patient","hemisphere","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
+            :param dataset: A dataframe contains "patient","laterality","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
                             "event_finish_time", "duration", "task" columns. It can be empty or filled previously.
             :param patient: A string representing the patient code
-            :param hemisphere: A string representing the hemisphere information
+            :param laterality: A string representing the laterality of the limb (right/left/bilateral) information
             :param event_indices: A list containing tuples (start_index, finish_index) of index information for events
             :param event_type: A string represents the type of event that is considered
         
@@ -235,10 +257,10 @@ class EVENTS:
                 event_task    = max(set(event_tasks), key=event_tasks.count) 
                 # add event to the dataset
                 dataset.loc[len(dataset)] = {"patient": patient, 
-                                             "hemisphere": hemisphere, 
+                                             "laterality": laterality, 
                                              "event": event_type, 
                                              "task": event_task,
-                                             "event_no": "p_" + patient + "_" + hemisphere + "_" + event_type + str(counter),
+                                             "event_no": "p_" + patient + "_" + laterality + "_" + event_type + str(counter),
                                              "event_start_index" : event_start_i, 
                                              "event_finish_index" : event_end_i, 
                                              "event_start_time" : self.times[event_start_i]/60, 
@@ -250,20 +272,20 @@ class EVENTS:
 
         """
         Description
-            This method populates an event dataframe for a given patient, hemisphere, and event type.
+            This method populates an event dataframe for a given patient, laterality, and event type.
 
         Input
-            :param dataset: A dataframe contains "patient","hemisphere","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
+            :param dataset: A dataframe contains "patient","laterality","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
                                                  "event_finish_time", "duration", "task" columns
             :param patient: A string representing the patient code
-            :param hemisphere: A string representing the hemisphere information
+            :param laterality: A string representing the laterality information
             :param event_indices: A list containing tuples (start_index, finish_index) of index information for events
             :param event_type: A string represents the type of event that is considered
         
         Output
             :return dataset: The more populated version of the given dataframe structure
         """
-        # get start and finish indices of different event types in different hemispheres
+        # get start and finish indices of different event types in different hands
         left_moves        = self.__get_event_indices(self.left_move.tolist())
         left_tapping      = self.__get_event_indices(self.left_tap.tolist())
         right_moves       = self.__get_event_indices(self.right_move.tolist())
@@ -272,7 +294,7 @@ class EVENTS:
         bilateral_tapping = self.__get_event_indices(self.bilateral_tap.tolist())
 
         # create an empty event dataframe
-        events = pd.DataFrame(columns=["patient", "hemisphere", "event", "task", "event_no", "event_start_index", "event_finish_index", 
+        events = pd.DataFrame(columns=["patient", "laterality", "event", "task", "event_no", "event_start_index", "event_finish_index", 
                                        "event_start_time", "event_finish_time", "duration"])   
 
         # populate the empty dataframe
@@ -282,21 +304,63 @@ class EVENTS:
         self.__populate_dataframe(events, self.__SUB, "right"    , right_tapping    , "tap")
         self.__populate_dataframe(events, self.__SUB, "bilateral", bilateral_moves  , "move" )
         self.__populate_dataframe(events, self.__SUB, "bilateral", bilateral_tapping, "tap" )
-    
-        # define dyskinesia_score column
-        events["dyskinesia_score"] = 0
-        # for each index check the hemisphere and get the corresponding dyskinesia score on the event onset
-        for index in events.index:
-            if(events.iloc[index].hemisphere == "right")       : events.loc[index, ['dyskinesia_score']] = self.CDRS_right[events.iloc[index].event_start_index]
-            elif(events.iloc[index].hemisphere == "left")      : events.loc[index, ['dyskinesia_score']] = self.CDRS_left[events.iloc[index].event_start_index]
-            elif(events.iloc[index].hemisphere == "bilateral") : events.loc[index, ['dyskinesia_score']] = self.CDRS_total[events.iloc[index].event_start_index]
 
+        									
+
+        # define dyskinesia_score column
+        events["CDRS_face"]        = 0
+        events["CDRS_neck"]        = 0
+        events["CDRS_trunk"]       = 0
+        events["CDRS_upper_right"] = 0
+        events["CDRS_lower_right"] = 0
+        events["CDRS_upper_left"]  = 0
+        events["CDRS_lower_left"]  = 0
+        events["CDRS_total_right"] = 0
+        events["CDRS_total_left"]  = 0
+        events["CDRS_total"]       = 0
+        
+        # for each index check the laterality and get the corresponding dyskinesia score on the event onset
+        for index in events.index:
+            events.loc[index, ['CDRS_face']]        = self.CDRS_face[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_neck']]        = self.CDRS_neck[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_trunk']]       = self.CDRS_trunk[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_upper_right']] = self.CDRS_upper_right[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_lower_right']] = self.CDRS_lower_right[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_upper_left']]  = self.CDRS_upper_left[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_lower_left']]  = self.CDRS_lower_left[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_total_right']] = self.CDRS_total_right[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_total_left']]  = self.CDRS_total_left[events.iloc[index].event_start_index]
+            events.loc[index, ['CDRS_total']]       = self.CDRS_total[events.iloc[index].event_start_index]
+            
         # define if the movement is voluntary or not as a column
         events["is_voluntary"]  = False
         events.loc[(events.event == "tap") & (events.task == "tap"), 'is_voluntary'] = True
         
         # add event categories to the dataframe
         events = self.__define_event_categories(events)
+
+        # combine the score of two hands
+        events['CDRS_total_hands'] = events['CDRS_upper_right'] + events['CDRS_upper_left']
+        
+        # map numerical values to severity equivalents
+        events['CDRS_face']        = events['CDRS_face'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_neck']        = events['CDRS_neck'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_trunk']       = events['CDRS_trunk'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_right_hand']  = events['CDRS_upper_right'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_right_leg']   = events['CDRS_lower_right'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_left_hand']   = events['CDRS_upper_left'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_left_leg']    = events['CDRS_lower_left'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
+        events['CDRS_total_hands'] = pd.cut(events['CDRS_total_hands'], bins=[-1, 0, 2, 4, 6, 8], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
+        events['CDRS_total_right'] = pd.cut(events['CDRS_total_right'], bins=[-1, 0, 2, 4, 6, 8], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
+        events['CDRS_total_left']  = pd.cut(events['CDRS_total_left'], bins=[-1, 0, 2, 4, 6, 8], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
+        events['CDRS_total']       = pd.cut(events['CDRS_total'], bins=[-1, 0, 7, 14, 21, 28], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
+        
+        events = events[['patient', 'laterality', 'event_no', 'event', 'task', 'is_voluntary',
+                         'event_category', 'event_start_index', 'event_finish_index',
+                         'event_start_time', 'event_finish_time', 'duration', 'CDRS_face',
+                         'CDRS_neck', 'CDRS_trunk', 'CDRS_right_hand',
+                         'CDRS_right_leg', 'CDRS_left_hand', 'CDRS_left_leg',
+                         'CDRS_total_hands', 'CDRS_total_right', 'CDRS_total_left', 'CDRS_total']]
         return events
     
     def get_CDRS_dataframe(self):
@@ -305,17 +369,17 @@ class EVENTS:
     def __define_event_categories(self, dataset):
     
         def categorize_event(row):
-            if (row['event'] == 'tap' and row['task'] == 'tap') : return 'voluntary_tapping'
-            elif (row['event'] == 'tap' and row['task'] != 'tap'): return 'involuntary_tapping'
+            if (row['event'] == 'tap' and row['task'] == 'tap') : return 'tapping'
+            #elif (row['event'] == 'tap' and row['task'] != 'tap'): return 'involuntary_tapping'
             else : return 'involuntary_movement'
             
             
     
         # Apply the function to create the new column 'event_category'
         dataset['event_category'] = dataset.apply(categorize_event, axis=1)
-        dataset                   = dataset[['patient', 'hemisphere', 'event_no', 'event', 'task', 'is_voluntary', 'event_category', 'event_start_index', 
-                                             'event_finish_index', 'event_start_time', 'event_finish_time', 'duration', 'dyskinesia_score']]
-
+        dataset                   = dataset[['patient', 'laterality', 'event_no', 'event', 'task', 'is_voluntary', 'event_category', 'event_start_index', 
+                                             'event_finish_index', 'event_start_time', 'event_finish_time', 'duration', 'CDRS_face', 'CDRS_neck', 'CDRS_trunk',
+                                             'CDRS_upper_right','CDRS_lower_right','CDRS_upper_left','CDRS_lower_left','CDRS_total_right','CDRS_total_left','CDRS_total']]
         return dataset
         
 ###############################################################################################################################################################
@@ -350,35 +414,42 @@ class KINEMATIC_DATA:
         self.ACC_L_Y = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Y')]
         self.ACC_L_Z = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Z')]
 
-    def extract_event_segment(self, event_dataset, hemisphere="", event_type="", event_category="", dyskinesia_score="", segment="event"):
+    def extract_event_segment(self, event_dataset, laterality="", event="", event_category="", dyskinesia_score="", segment="event"):
+        
         fs             = self.fs
         
-        if(hemisphere!=""):
-            # check if the selected hemisphere is valid
-            assert hemisphere in ["right", "left", "bilateral"], f'Please choose hemisphere as "right", "left", "bilateral"'
-            
-        if(event_type!=""):
+        if(laterality!=""):
+            # check if the selected laterality is valid
+            assert laterality in ["right", "left", "bilateral"], f'Please choose laterality as "right", "left", "bilateral"'
+            if(laterality=="right"):
+                dyskinesia_body_part = "CDRS_right_hand"
+            elif(laterality=="left"):
+                dyskinesia_body_part = "CDRS_left_hand"
+            elif(laterality=="bilateral"):
+                dyskinesia_body_part = "CDRS_total_hands"    
+        elif(laterality==""): # if laterality was not given, check the total hand scores
+            dyskinesia_body_part = "CDRS_total_hands"
+        
+        if(event!=""):
             # check if the selected event type is valid
-            assert event_category in event_dataset.event.unique().tolist(), f'Please enter valid event type as "move", "tap"'
+            assert event in event_dataset.event.unique().tolist(), f'Please enter valid event as "move", "tap"'
 
         if(event_category!=""): 
             # check if the event category is valid
             assert event_category in event_dataset.event_category.unique().tolist(), f'Please enter valid event category, not ({event_category})'
-
+            
         # check if segment is valid
         assert segment in ["pre", "event", "post"], f'Please choose segment as "pre", "event", or "post"'
        
         #################################################################################################################################
-        dataset = event_dataset[event_dataset['hemisphere']==hemisphere] if hemisphere != "" else event_dataset # select hemisphere
-        dataset = dataset[dataset['event']==event_type] if event_type != "" else dataset                        # select event type
-        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset       # select event category
-        dataset = dataset[dataset['dyskinesia_score']==dyskinesia_score] if dyskinesia_score != "" else dataset # select dyskinesia score
+        dataset = event_dataset[event_dataset['laterality']==laterality] if laterality != "" else event_dataset   # select laterality
+        dataset = dataset[dataset['event']==event] if event != "" else dataset                                    # select event type
+        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset         # select event category
+        dataset = dataset[dataset[dyskinesia_body_part]==dyskinesia_score] if dyskinesia_score != "" else dataset # select dyskinesia score
         #################################################################################################################################
         
         # create empty arrays for storing accelerometer data for selected event category
-        acc_x = []
-        acc_y = []
-        acc_z = []
+        acc_svm = []
 
         # iterate across dataframe rows
         for _, row in dataset.iterrows():
@@ -398,10 +469,10 @@ class KINEMATIC_DATA:
                 start_index    = row['event_finish_index']        # event offset
                 finish_index   = row['event_finish_index'] + fs   # 1 sec after event offset
     
-            # get hemisphere information
-            hemisphere     = row['hemisphere']
+            # get laterality information
+            laterality     = row['laterality']
             
-            if(hemisphere == "right"):
+            if(laterality == "right"):
                 acc_data_x = self.ACC_R_X[start_index:finish_index].tolist()
                 acc_data_y = self.ACC_R_Y[start_index:finish_index].tolist()
                 acc_data_z = self.ACC_R_Z[start_index:finish_index].tolist()
@@ -410,48 +481,49 @@ class KINEMATIC_DATA:
                 acc_data_y = self.ACC_L_Y[start_index:finish_index].tolist()
                 acc_data_z = self.ACC_L_Z[start_index:finish_index].tolist()
             
-            acc_x.append(acc_data_x)
-            acc_y.append(acc_data_y)
-            acc_z.append(acc_data_z)
-
-        # store selected events in 3 axis of accelerometer data into a dictionary file
-        acc_events      = {}
-        acc_events["X"] = acc_x
-        acc_events["Y"] = acc_y
-        acc_events["Z"] = acc_z
+            # measure the signal vector magnitude
+            svm  = np.sqrt(np.array(acc_data_x)**2 + np.array(acc_data_y)**2 + np.array(acc_data_z)**2)
+            acc_svm.append(svm)
         
-        return acc_events
+        return acc_svm
                                    
-    def extract_accelerometer_events(self, event_dataset, hemisphere="", event_type="", event_category="", dyskinesia_score="", alignment="onset", t_observation=4):
+    def extract_accelerometer_events(self, event_dataset, laterality="", event="", event_category="", dyskinesia_score="", alignment="onset", t_observation=4):
 
-        fs             = self.fs
+        fs = self.fs
         
-        if(hemisphere!=""):
-            # check if the selected hemisphere is valid
-            assert hemisphere in ["right", "left", "bilateral"], f'Please choose hemisphere as "right", "left", "bilateral"'
+        if(laterality!=""):
+            # check if the selected laterality is valid
+            assert laterality in ["right", "left", "bilateral"], f'Please choose laterality as "right", "left", "bilateral"'
+            if(laterality=="right"):
+                dyskinesia_body_part = "CDRS_right_hand"
+            elif(laterality=="left"):
+                dyskinesia_body_part = "CDRS_left_hand"
+            elif(laterality=="bilateral"):
+                dyskinesia_body_part = "CDRS_total_hands"
+                
+        elif(laterality==""): # if laterality was not given, check the total hand scores
+            dyskinesia_body_part = "CDRS_total_hands"
             
-        if(event_type!=""):
+        if(event!=""):
             # check if the selected event type is valid
-            assert event_category in event_dataset.event.unique().tolist(), f'Please enter valid event type as "move", "tap"'
+            assert event in event_dataset.event.unique().tolist(), f'Please enter valid event as "move", "tap"'
 
         if(event_category!=""): 
             # check if the event category is valid
             assert event_category in event_dataset.event_category.unique().tolist(), f'Please enter valid event category, not ({event_category})'
             
-        # check if event alignment strategy is valid
+        # check if the event alignment strategy is valid
         assert alignment in ["onset", "offset"], f'Please choose alignment as "onset", "offset"'
        
         #################################################################################################################################
-        dataset = event_dataset[event_dataset['hemisphere']==hemisphere] if hemisphere != "" else event_dataset # select hemisphere
-        dataset = dataset[dataset['event']==event_type] if event_type != "" else dataset                        # select event type
-        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset       # select event category
-        dataset = dataset[dataset['dyskinesia_score']==dyskinesia_score] if dyskinesia_score != "" else dataset # select dyskinesia score
+        dataset = event_dataset[event_dataset['laterality']==laterality] if laterality != "" else event_dataset   # select laterality
+        dataset = dataset[dataset['event']==event] if event != "" else dataset                                    # select event type
+        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset               # select event category
+        dataset = dataset[dataset[dyskinesia_body_part]==dyskinesia_score] if dyskinesia_score != "" else dataset # select dyskinesia score
         #################################################################################################################################
         
-        # create empty arrays for storing accelerometer data for selected event category
-        acc_x = []
-        acc_y = []
-        acc_z = []
+        # create empty arrays for storing accelerometer data (signal vector magnitude of three axis) for selected event category
+        acc_svm = []
     
         # iterate across dataframe rows
         for _, row in dataset.iterrows():
@@ -466,10 +538,10 @@ class KINEMATIC_DATA:
                 finish_index   = row['event_finish_index'] + fs          # 1 sec after event offset
                 start_index    = finish_index - (t_observation * fs)     # t_observation sec before
     
-            # get hemisphere information
-            hemisphere     = row['hemisphere']
+            # get laterality information
+            laterality     = row['laterality']
             
-            if(hemisphere == "right"):
+            if(laterality == "right"):
                 acc_data_x = self.ACC_R_X[start_index:finish_index].tolist()
                 acc_data_y = self.ACC_R_Y[start_index:finish_index].tolist()
                 acc_data_z = self.ACC_R_Z[start_index:finish_index].tolist()
@@ -477,18 +549,12 @@ class KINEMATIC_DATA:
                 acc_data_x = self.ACC_L_X[start_index:finish_index].tolist()
                 acc_data_y = self.ACC_L_Y[start_index:finish_index].tolist()
                 acc_data_z = self.ACC_L_Z[start_index:finish_index].tolist()
-            
-            acc_x.append(acc_data_x)
-            acc_y.append(acc_data_y)
-            acc_z.append(acc_data_z)
 
-        # store selected events in 3 axis of accelerometer data into a dictionary file
-        acc_events      = {}
-        acc_events["X"] = acc_x
-        acc_events["Y"] = acc_y
-        acc_events["Z"] = acc_z
-        
-        return acc_events
+            # measure the signal vector magnitude
+            svm  = np.sqrt(np.array(acc_data_x)**2 + np.array(acc_data_y)**2 + np.array(acc_data_z)**2)
+            acc_svm.append(svm)
+            
+        return acc_svm
 
     def create_event_segment_dictionary(self, dataset, fs, segment):
     
@@ -499,13 +565,13 @@ class KINEMATIC_DATA:
             acc_events[event_category] = {}
     
             # loop in dyskinesia severity
-            for severity in ["no","mild","moderate","severe"]:
-                events = self.extract_event_segment(dataset, event_category=event_category, dyskinesia_score=utils_accelerometer.dyskinesia_severity[severity],segment=segment)
+            for severity in ["none","mild","moderate","severe","extreme"]:
+                events = self.extract_event_segment(dataset, event_category=event_category, dyskinesia_score=severity,segment=segment)
                 acc_events[event_category]["LID_"+severity] = events
                     
         return acc_events
 
-    def __measure_temporal_metrics(self, dataframe, data, patient, event_category, dyskinesia_severity, axis, segment):
+    def __measure_temporal_metrics(self, dataframe, data, patient, fs, event_category, dyskinesia_severity, segment):
         
         data                             = np.array(data)
         
@@ -513,7 +579,6 @@ class KINEMATIC_DATA:
         metrics["patient"]               = patient
         metrics["event_category"]        = event_category
         metrics["dyskinesia_severity"]   = dyskinesia_severity
-        metrics["acc_axis"]              = axis
         metrics["event_segment"]         = segment
         
         metrics["mean"]                  = np.mean(data)
@@ -522,9 +587,8 @@ class KINEMATIC_DATA:
         metrics["range"]                 = np.ptp(data)
         metrics["median"]                = np.median(data)
         metrics["iqr"]                   = np.percentile(data, 75) - np.percentile(data, 25)
-        metrics["positive_peak"]         = np.max(data)
-        metrics["negative_peak"]         = np.min(data)
-        metrics["zero_crossing_rate"]    = np.sum(np.diff(np.sign(data)) != 0)
+        metrics["peak"]                  = np.max(data)
+        metrics["peak_location"]         = np.argmax(abs(data))/fs                           # temporal location of peak (pos or neg) in seconds
         metrics["mean_crossing_rate"]    = np.sum(np.diff(np.sign(data - np.mean(data))) != 0)
         metrics["signal_energy"]         = np.sum(data**2)
         metrics["signal_magnitude_area"] = np.sum(np.abs(data))                              # signal magnitude area: sum of the absolute values
@@ -541,9 +605,9 @@ class KINEMATIC_DATA:
         
     def extract_temporal_metrics_from_event_segments(self, patient, event_dataframe):
         
-        df_metrics = pd.DataFrame(columns=["patient","event_category","dyskinesia_severity","acc_axis","event_segment",
-                                           'mean', 'std', 'RMS', 'range', 'median', 'iqr', 'positive_peak', 'negative_peak', 
-                                           'zero_crossing_rate', 'mean_crossing_rate', 'signal_energy', 'signal_magnitude_area', 
+        df_metrics = pd.DataFrame(columns=["patient","event_category","dyskinesia_severity","event_segment",
+                                           'mean', 'std', 'RMS', 'range', 'median', 'iqr', 'peak', "peak_location",
+                                           'mean_crossing_rate', 'signal_energy', 'signal_magnitude_area', 
                                            'crest_factor', 'impulse_factor', 'shape_factor', 'clearance_factor'])
     
         for segment in ["pre", "event", "post"]:
@@ -551,15 +615,14 @@ class KINEMATIC_DATA:
             event_segment_dict = self.create_event_segment_dictionary(event_dataframe, self.fs, segment=segment)
         
             for event_category in event_segment_dict.keys():
-                for dyskinesia_severity in ["LID_no", "LID_mild", "LID_moderate", "LID_severe"]:
-                    for axis in event_segment_dict[event_category][dyskinesia_severity].keys():
-                        event_segment_array = event_segment_dict[event_category][dyskinesia_severity][axis]
-                        if(len(event_segment_array)!=0):
-                            for i in range(len(event_segment_array)):
-                                even_segment = event_segment_array[i]
-                                df_metrics   = self.__measure_temporal_metrics(df_metrics, even_segment, patient, event_category, dyskinesia_severity, axis, segment)
+                for dyskinesia_severity in ["LID_none", "LID_mild", "LID_moderate", "LID_severe", "LID_extreme"]:
+                    event_segment_array = event_segment_dict[event_category][dyskinesia_severity]
+                    if(len(event_segment_array)!=0):
+                        for i in range(len(event_segment_array)):
+                            even_segment = event_segment_array[i]
+                            df_metrics   = self.__measure_temporal_metrics(df_metrics, even_segment, patient, self.fs, event_category, dyskinesia_severity, segment)
 
-        metric_list = ['mean', 'std', 'RMS', 'range', 'median', 'iqr', 'positive_peak', 'negative_peak', 'zero_crossing_rate', 'mean_crossing_rate', 
+        metric_list = ['mean', 'std', 'RMS', 'range', 'median', 'iqr', 'peak', "peak_location", 'mean_crossing_rate', 
                        'signal_energy', 'signal_magnitude_area',  'crest_factor', 'impulse_factor', 'shape_factor', 'clearance_factor']
         
         return df_metrics, metric_list
