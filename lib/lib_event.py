@@ -52,11 +52,11 @@ class EVENTS:
             This method finds events that occurred in array_A but not in array_B. The two arrays were expected to have the same length
 
         Input
-            :param array_A: A binary list represents the existence of event=1 and absence=0.
-            :param array_B: A binary list represents the existence of event=1 and absence=0.
+            array_A: A binary list represents the existence of event=1 and absence=0.
+            array_B: A binary list represents the existence of event=1 and absence=0.
 
         Output
-            :return: A binary list with the same length as provided arrays.
+            A binary list with the same length as provided arrays.
         """
         assert len(array_A) == len(array_A), "Please provide two arrays with the same length."
         return [1 if event_A == 1 and event_B == 0 else 0 for event_A, event_B in zip(array_A, array_B)]
@@ -67,11 +67,11 @@ class EVENTS:
             This method finds events that occurred both in array_A and array_B (and operator). The two arrays were expected to have the same length
 
         Input
-            :param array_A: A binary list represents the existence of event=1 and absence=0.
-            :param array_B: A binary list represents the existence of event=1 and absence=0.
+            array_A: A binary list represents the existence of event=1 and absence=0.
+            array_B: A binary list represents the existence of event=1 and absence=0.
 
         Output
-            :return: A binary list with the same length as provided arrays.
+            A binary list with the same length as provided arrays.
         """
         assert len(array_A) == len(array_A), "Please provide two arrays with the same length."
         return ([a & b for a, b in zip(array_A, array_B)])
@@ -82,11 +82,11 @@ class EVENTS:
             This method finds events that occurred either in array_A or array_B (or operator). The two arrays were expected to have the same length
 
         Input
-            :param array_A: A binary list represents the existence of event=1 and absence=0.
-            :param array_B: A binary list represents the existence of event=1 and absence=0.
+            array_A: A binary list represents the existence of event=1 and absence=0.
+            array_B: A binary list represents the existence of event=1 and absence=0.
 
         Output
-            :return: A binary list with the same length as provided arrays.
+            A binary list with the same length as provided arrays.
         """
         assert len(array_A) == len(array_A), "Please provide two arrays with the same length."
         return ([a | b for a, b in zip(array_A, array_B)])
@@ -98,11 +98,10 @@ class EVENTS:
             VOLUNTARY TAPPING: the tapping event observed in tap field + not observed in the move field + observed during the tapping period
             
         Output
-            :return: The definitions of events are added as a class field that can be accessible.
+            The definitions of events are added as a class field that can be accessible.
         """
         self.left_voluntary_tap          = self.__operator_event_intersection(self.__operator_event_difference(self.left_tap, self.left_move), self.period_tap)
         self.left_involuntary_movements  = self.__operator_event_difference(self.left_move, self.left_tap)
-        
         self.right_voluntary_tap         = self.__operator_event_intersection(self.__operator_event_difference(self.right_tap, self.right_move), self.period_tap)
         self.right_involuntary_movements = self.__operator_event_difference(self.right_move, self.right_tap)
 
@@ -117,11 +116,10 @@ class EVENTS:
             evaluation is made.
             
         Output
-            :return: The definitions of dyskinesia scores in the right, left, and bilateral side were added as a field. It also returns a 
-                     Python dictionary with three fields:
-                     - key: "CDRS_right", value: an integer array
-                     - key: "CDRS_left", value: an integer array
-                     - key: "CDRS_total", value: an integer array
+            The definitions of dyskinesia scores in the right, left, and bilateral side were added as a field. It also returns a Python dictionary with three fields:
+            - key: "CDRS_right", value: an integer array
+            - key: "CDRS_left", value: an integer array
+            - key: "CDRS_total", value: an integer array
         """
 
         # check if the CDRS scores exist in the directory
@@ -189,10 +187,10 @@ class EVENTS:
             to the function.
 
         Input
-            :param array: A binary list represents the existence=1 and absence=0 of a particular event (move/tapping).
+            array: A binary list represents the existence=1 and absence=0 of a particular event (move/tapping).
 
         Output
-            :return event_indices: A list containing tupples (start_index, finish_index) of index information for events
+            event_indices: A list containing tuples (start_index, finish_index) of index information for events
         """
         event_indices     = []
         event_started     = False
@@ -217,20 +215,20 @@ class EVENTS:
 
         """
         Description
-            This method add a dataframe that contains all events detected for the given side of the patients. Initially, it acquires all the events contained 
+            This method adds a dataframe that contains all events detected for the given side of the patients. Initially, it acquires all the events contained 
             in _tap and _move fields. The information regarding the task (tapping, free, rest), the category (voluntary tapping, involuntary tapping, involuntary movement),
             event start and finish timestamps, etc are stored in this dataframe.
 
         Input
-            :param dataset: A dataframe contains "patient","laterality","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
+            dataset: A dataframe contains "patient","laterality","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
                             "event_finish_time", "duration", "task" columns. It can be empty or filled previously.
-            :param patient: A string representing the patient code
-            :param laterality: A string representing the laterality of the limb (right/left/bilateral) information
-            :param event_indices: A list containing tuples (start_index, finish_index) of index information for events
-            :param event_type: A string represents the type of event that is considered
+            patient: A string representing the patient code
+            laterality: A string representing the laterality of the limb (right/left/bilateral) information
+            event_indices: A list containing tuples (start_index, finish_index) of index information for events
+            event_type: A string represents the type of event that is considered
         
         Output
-            :return dataset: The more populated version of the given dataframe structure
+            dataset: The more populated version of the given dataframe structure
         """
         
         counter    = 1
@@ -265,15 +263,15 @@ class EVENTS:
             This method populates an event dataframe for a given patient, laterality, and event type.
 
         Input
-            :param dataset: A dataframe contains "patient","laterality","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
+            dataset: A dataframe contains "patient","laterality","event_type", "event_no", "event_start_index", "event_finish_index", "event_start_time", 
                                                  "event_finish_time", "duration", "task" columns
-            :param patient: A string representing the patient code
-            :param laterality: A string representing the laterality information
-            :param event_indices: A list containing tuples (start_index, finish_index) of index information for events
-            :param event_type: A string represents the type of event that is considered
+            patient: A string representing the patient code
+            laterality: A string representing the laterality information
+            event_indices: A list containing tuples (start_index, finish_index) of index information for events
+            event_type: A string represents the type of event that is considered
         
         Output
-            :return dataset: The more populated version of the given dataframe structure
+            dataset: The more populated version of the given dataframe structure
         """
         # get start and finish indices of different event types in different hands
         left_moves        = self.__get_event_indices(self.left_move.tolist())
