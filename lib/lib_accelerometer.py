@@ -48,7 +48,7 @@ class ACCELEROMETER:
             elif(laterality=="bilateral"):
                 dyskinesia_body_part = "CDRS_total_hands"    
         elif(laterality==""): # if laterality was not given, check the total hand scores
-            dyskinesia_body_part = "CDRS_total_hands"
+            dyskinesia_body_part = "dyskinesia_score"
         
         if(event!=""):
             # check if the selected event type is valid
@@ -122,7 +122,7 @@ class ACCELEROMETER:
                 dyskinesia_body_part = "CDRS_total_hands"
                 
         elif(laterality==""): # if laterality was not given, check the total hand scores
-            dyskinesia_body_part = "CDRS_total_hands"
+            dyskinesia_body_part = "dyskinesia_score"
             
         if(event!=""):
             # check if the selected event type is valid
@@ -138,7 +138,7 @@ class ACCELEROMETER:
         #################################################################################################################################
         dataset = event_dataset[event_dataset['laterality']==laterality] if laterality != "" else event_dataset   # select laterality
         dataset = dataset[dataset['event']==event] if event != "" else dataset                                    # select event type
-        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset               # select event category
+        dataset = dataset[dataset['event_category']==event_category] if event_category != "" else dataset         # select event category
         dataset = dataset[dataset[dyskinesia_body_part]==dyskinesia_score] if dyskinesia_score != "" else dataset # select dyskinesia score
         #################################################################################################################################
         
@@ -200,7 +200,8 @@ class ACCELEROMETER:
         metrics["event_category"]        = event_category
         metrics["dyskinesia_severity"]   = dyskinesia_severity
         metrics["event_segment"]         = segment
-        
+
+        metrics["duration"]              = len(data) / fs                                    # duration of segment (only logical for event segment
         metrics["mean"]                  = np.mean(data)
         metrics["std"]                   = np.std(data)
         metrics["RMS"]                   = np.sqrt(np.mean(data**2))
@@ -225,7 +226,7 @@ class ACCELEROMETER:
         
     def extract_temporal_metrics_from_event_segments(self, patient, event_dataframe):
         
-        df_metrics = pd.DataFrame(columns=["patient","event_category","dyskinesia_severity","event_segment",
+        df_metrics = pd.DataFrame(columns=["patient","event_category","dyskinesia_severity","event_segment", "duration", 
                                            'mean', 'std', 'RMS', 'range', 'median', 'iqr', 'peak', "peak_location",
                                            'mean_crossing_rate', 'signal_energy', 'signal_magnitude_area', 
                                            'crest_factor', 'impulse_factor', 'shape_factor', 'clearance_factor'])
@@ -242,7 +243,7 @@ class ACCELEROMETER:
                             even_segment = event_segment_array[i]
                             df_metrics   = self.__measure_temporal_metrics(df_metrics, even_segment, patient, self.fs, event_category, dyskinesia_severity, segment)
 
-        metric_list = ['mean', 'std', 'RMS', 'range', 'median', 'iqr', 'peak', "peak_location", 'mean_crossing_rate', 
+        metric_list = ['duration', 'mean', 'std', 'RMS', 'range', 'median', 'iqr', 'peak', "peak_location", 'mean_crossing_rate', 
                        'signal_energy', 'signal_magnitude_area',  'crest_factor', 'impulse_factor', 'shape_factor', 'clearance_factor']
         
         return df_metrics, metric_list

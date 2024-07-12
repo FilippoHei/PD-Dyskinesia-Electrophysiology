@@ -8,8 +8,10 @@ from utils.utils_fileManagement import load_class_pickle, mergedData
 class DATA_IO:
 
     # definition of static fields
-    path_events_dataframe = "../events/"
+    path_events           = "../events/"
+    path_coordinates      = "../coordinates/"
     path_figure           = "../figures/"
+    path_data             = "../data/"
         
     def __init__(self, PATH, SUB, DAT_SOURCE):
         self.__PATH        = PATH

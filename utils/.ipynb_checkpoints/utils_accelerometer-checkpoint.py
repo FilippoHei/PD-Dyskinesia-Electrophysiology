@@ -42,7 +42,7 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
             # if particular severity is not selected, consider all events
             if(severity != ""):
                 
-                acc_events[event_category]["LID_"+severity] = {}
+                acc_events[event_category][severity] = {}
 
                 # loop in alignment strategies
                 for alignment in ["onset", "offset"]:
@@ -50,7 +50,7 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
                     # get aligned event arrays for the selected combination
                     events = kinematic.extract_accelerometer_events(dataset, event_category=event_category, dyskinesia_score=severity, 
                                                                     alignment=alignment, t_observation=t_observation)
-                    acc_events[event_category]["LID_"+severity][alignment] = events
+                    acc_events[event_category][severity][alignment] = events
             else:
                 
                 acc_events[event_category]["all"] = {}

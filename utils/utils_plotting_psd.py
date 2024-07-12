@@ -106,7 +106,7 @@ def plot_LFP_power_spectra_panel(freq, psd_mean, psd_error, color, axis):
     if(len(freq)!=0):
         plot_adjusted_psd(freq, psd_mean=psd_mean, psd_error=psd_error, color=color, axis=axis)
         set_axis(axis)
-        axis.set_ylim([-0.1,2])
+        axis.set_ylim([-0.1,2.5])
         axis.set_xticklabels([xt for xt in [4, 12, 20, 30, 60, 70, 80, 90]]) 
         
     return axis

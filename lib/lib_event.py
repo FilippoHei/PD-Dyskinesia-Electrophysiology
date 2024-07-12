@@ -9,7 +9,14 @@ from lib_data import DATA_IO
 import utils_accelerometer
 
 class EVENTS:
-        
+
+    event_severity             = {}
+    event_severity["none"]     = 0
+    event_severity["mild"]     = 1
+    event_severity["moderate"] = 2
+    event_severity["severe"]   = 3
+    event_severity["extreme"]  = 4
+    
     def __init__(self, PATH, SUB, DAT_SOURCE):
 
         # setting environmental variables
@@ -44,7 +51,8 @@ class EVENTS:
         print("... events were categorized")
         self.get_dyskinesia_scores()
         print("... dyskinesia evaluation was collected")
-        print("... loading completed")
+        print("... event loading completed")
+        print("--------------------------------------------------------------------")
 
     def __operator_event_difference(self, array_A, array_B):
         """

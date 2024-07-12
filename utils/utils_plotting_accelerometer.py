@@ -19,17 +19,17 @@ colors                                         = {}
 colors["tapping"]                              = {}
 colors["involuntary_movement"]                 = {}
 
-colors["tapping"]["LID_none"]                  = "#FFEA00"
-colors["tapping"]["LID_mild"]                  = "#EF8A06"
-colors["tapping"]["LID_moderate"]              = "#DC2F02"
-colors["tapping"]["LID_severe"]                = "#9D0208"
-colors["tapping"]["LID_extreme"]               = "#370617"
+colors["tapping"]["none"]                  = "#FFEA00"
+colors["tapping"]["mild"]                  = "#EF8A06"
+colors["tapping"]["moderate"]              = "#DC2F02"
+colors["tapping"]["severe"]                = "#9D0208"
+colors["tapping"]["extreme"]               = "#370617"
 
-colors["involuntary_movement"]["LID_none"]     = "#70D8EB"
-colors["involuntary_movement"]["LID_mild"]     = "#00AACC"
-colors["involuntary_movement"]["LID_moderate"] = "#006AA3"
-colors["involuntary_movement"]["LID_severe"]   = "#023579"
-colors["involuntary_movement"]["LID_extreme"]  = "#03045E"
+colors["involuntary_movement"]["none"]     = "#70D8EB"
+colors["involuntary_movement"]["mild"]     = "#00AACC"
+colors["involuntary_movement"]["moderate"] = "#006AA3"
+colors["involuntary_movement"]["severe"]   = "#023579"
+colors["involuntary_movement"]["extreme"]  = "#03045E"
 
 def get_figure_template():
     
@@ -106,17 +106,17 @@ def plot_accelerometer_events_by_category(accelerometer_events, kinematics, colo
     ax4  = plt.subplot2grid((75, 40), (20, 25), colspan=18, rowspan=15)
 
     # onset aligned
-    cat  = "tapping"
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"], kinematics.fs, axis=ax1, 
-                                             color=colors[cat]["LID_moderate"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["offset"], kinematics.fs, axis=ax3, 
-                                             color=colors[cat]["LID_moderate"], padding_for="offset")
+    category  = "tapping"
+    plot_accelerometer_events(accelerometer_events[category]["all"]["onset"], kinematics.fs, axis=ax1, 
+                                             color=colors[category]["moderate"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[category]["all"]["offset"], kinematics.fs, axis=ax3, 
+                                             color=colors[category]["moderate"], padding_for="offset")
     
-    cat  = "involuntary_movement"
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["onset"], kinematics.fs, axis=ax2, 
-                                             color=colors[cat]["LID_moderate"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[cat]["all"]["offset"], kinematics.fs, axis=ax4, 
-                                             color=colors[cat]["LID_moderate"], padding_for="offset")
+    category  = "involuntary_movement"
+    plot_accelerometer_events(accelerometer_events[category]["all"]["onset"], kinematics.fs, axis=ax2, 
+                                             color=colors[category]["moderate"], padding_for="onset")
+    plot_accelerometer_events(accelerometer_events[category]["all"]["offset"], kinematics.fs, axis=ax4, 
+                                             color=colors[category]["moderate"], padding_for="offset")
     
     set_axis(ax1)
     set_axis(ax2)
@@ -138,10 +138,10 @@ def plot_accelerometer_events_by_category(accelerometer_events, kinematics, colo
     ax3.set_xlim([-3,1])
     ax4.set_xlim([-3,1])
     
-    ax1.set_ylim([0, 2.5e-06])
-    ax2.set_ylim([0, 2.5e-06])
-    ax3.set_ylim([0, 2.5e-06])
-    ax4.set_ylim([0, 2.5e-06])
+    ax1.set_ylim([0, 1.5e-06])
+    ax2.set_ylim([0, 1.5e-06])
+    ax3.set_ylim([0, 1.5e-06])
+    ax4.set_ylim([0, 1.5e-06])
     
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
@@ -151,31 +151,31 @@ def plot_accelerometer_events_by_dyskinesia(accelerometer_events, kinematics, co
     
     plt  = get_figure_template()
     ax1  = plt.subplot2grid((75, 40), (0, 0)  , colspan=18, rowspan=15)
-    ax2  = plt.subplot2grid((75, 40), (0, 25) , colspan=18, rowspan=15)
+    ax2  = plt.subplot2grid((75, 40), (0, 20) , colspan=18, rowspan=15)
     ax3  = plt.subplot2grid((75, 40), (20, 0) , colspan=18, rowspan=15)
-    ax4  = plt.subplot2grid((75, 40), (20, 25), colspan=18, rowspan=15)
+    ax4  = plt.subplot2grid((75, 40), (20, 20), colspan=18, rowspan=15)
 
     event_category = "tapping"
 
     # onset aligned
-    for severity in ["LID_extreme", "LID_severe", "LID_moderate", "LID_mild", "LID_none"]:
+    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
         plot_accelerometer_events(accelerometer_events[event_category][severity]["onset"], kinematics.fs, 
                                   axis=ax1, color=colors[event_category][severity], padding_for="onset")
 
     # offset aligned
-    for severity in ["LID_extreme", "LID_severe", "LID_moderate", "LID_mild", "LID_none"]:
+    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
         plot_accelerometer_events(accelerometer_events[event_category][severity]["offset"], kinematics.fs, 
                                   axis=ax3, color=colors[event_category][severity], padding_for="offset")
 
     event_category = "involuntary_movement"
     
     # onset aligned
-    for severity in ["LID_extreme", "LID_severe", "LID_moderate", "LID_mild", "LID_none"]:
+    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
         plot_accelerometer_events(accelerometer_events[event_category][severity]["onset"], kinematics.fs, 
                                   axis=ax2, color=colors[event_category][severity], padding_for="onset")
 
     # offset aligned
-    for severity in ["LID_extreme", "LID_severe", "LID_moderate", "LID_mild", "LID_none"]:
+    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
         plot_accelerometer_events(accelerometer_events[event_category][severity]["offset"], kinematics.fs, 
                                   axis=ax4, color=colors[event_category][severity], padding_for="offset")
     
@@ -196,10 +196,10 @@ def plot_accelerometer_events_by_dyskinesia(accelerometer_events, kinematics, co
     ax4.set_xlim([-3,1])
     
     # aling y axes
-    ax1.set_ylim([0, 2.5e-06])
-    ax2.set_ylim([0, 2.5e-06])
-    ax3.set_ylim([0, 2.5e-06])
-    ax4.set_ylim([0, 2.5e-06])
+    ax1.set_ylim([0, 1.5e-06])
+    ax2.set_ylim([0, 1.5e-06])
+    ax3.set_ylim([0, 1.5e-06])
+    ax4.set_ylim([0, 1.5e-06])
     
     set_axis(ax1)
     set_axis(ax2)
@@ -207,20 +207,20 @@ def plot_accelerometer_events_by_dyskinesia(accelerometer_events, kinematics, co
     set_axis(ax4)
 
     # add legend
-    c_LID_none     = mpatches.Patch(color=colors["tapping"]["LID_none"], label='LID none')
-    c_LID_mild     = mpatches.Patch(color=colors["tapping"]["LID_mild"], label='LID mild')
-    c_LID_moderate = mpatches.Patch(color=colors["tapping"]["LID_moderate"], label='LID moderate')
-    c_LID_severe   = mpatches.Patch(color=colors["tapping"]["LID_severe"], label='LID severe')
-    c_LID_extreme  = mpatches.Patch(color=colors["tapping"]["LID_extreme"], label='LID extreme')
+    c_LID_none     = mpatches.Patch(color=colors["tapping"]["none"], label='LID none')
+    c_LID_mild     = mpatches.Patch(color=colors["tapping"]["mild"], label='LID mild')
+    c_LID_moderate = mpatches.Patch(color=colors["tapping"]["moderate"], label='LID moderate')
+    c_LID_severe   = mpatches.Patch(color=colors["tapping"]["severe"], label='LID severe')
+    c_LID_extreme  = mpatches.Patch(color=colors["tapping"]["extreme"], label='LID extreme')
     ax3.legend(handles=[c_LID_none, c_LID_mild, c_LID_moderate, c_LID_severe, c_LID_extreme], 
                prop={'size': LABEL_SIZE_title}, loc='lower center', bbox_to_anchor=(0.5,-1))
 
     # add legend
-    c_LID_none     = mpatches.Patch(color=colors["involuntary_movement"]["LID_none"], label='LID none')
-    c_LID_mild     = mpatches.Patch(color=colors["involuntary_movement"]["LID_mild"], label='LID mild')
-    c_LID_moderate = mpatches.Patch(color=colors["involuntary_movement"]["LID_moderate"], label='LID moderate')
-    c_LID_severe   = mpatches.Patch(color=colors["involuntary_movement"]["LID_severe"], label='LID severe')
-    c_LID_extreme  = mpatches.Patch(color=colors["involuntary_movement"]["LID_extreme"], label='LID extreme')
+    c_LID_none     = mpatches.Patch(color=colors["involuntary_movement"]["none"], label='LID none')
+    c_LID_mild     = mpatches.Patch(color=colors["involuntary_movement"]["mild"], label='LID mild')
+    c_LID_moderate = mpatches.Patch(color=colors["involuntary_movement"]["moderate"], label='LID moderate')
+    c_LID_severe   = mpatches.Patch(color=colors["involuntary_movement"]["severe"], label='LID severe')
+    c_LID_extreme  = mpatches.Patch(color=colors["involuntary_movement"]["extreme"], label='LID extreme')
     ax4.legend(handles=[c_LID_none, c_LID_mild, c_LID_moderate, c_LID_severe, c_LID_extreme], 
                prop={'size': LABEL_SIZE_title}, loc='lower center', bbox_to_anchor=(0.5,-1))
     
