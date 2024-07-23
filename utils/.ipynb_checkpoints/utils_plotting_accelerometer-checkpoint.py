@@ -6,86 +6,41 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
+import os
 import matplotlib.patches as mpatches
 from scipy.signal import spectrogram
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-LABEL_SIZE       = 5
-LABEL_SIZE_label = 6 
-LABEL_SIZE_title = 7 
+sys.path.insert(0, './lib')
+sys.path.insert(0, './utils/')
 
-# color dataframe
-colors                                         = {}
-colors["tapping"]                              = {}
-colors["involuntary_movement"]                 = {}
+import utils_plotting, utils_accelerometer
 
-colors["tapping"]["none"]                  = "#FFEA00"
-colors["tapping"]["mild"]                  = "#EF8A06"
-colors["tapping"]["moderate"]              = "#DC2F02"
-colors["tapping"]["severe"]                = "#9D0208"
-colors["tapping"]["extreme"]               = "#370617"
+from lib_data import DATA_IO
 
-colors["involuntary_movement"]["none"]     = "#70D8EB"
-colors["involuntary_movement"]["mild"]     = "#00AACC"
-colors["involuntary_movement"]["moderate"] = "#006AA3"
-colors["involuntary_movement"]["severe"]   = "#023579"
-colors["involuntary_movement"]["extreme"]  = "#03045E"
 
-def get_figure_template():
-    
-    plt.rc('font', serif="Neue Haas Grotesk Text Pro")
-    fig = plt.figure()
-    fig.tight_layout()
-    cm = 1/2.54  # centimeters in inches
-    plt.subplots(figsize=(18.5*cm, 21*cm))
-    return plt
-
-def set_axis(ax):
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.tick_params(axis='both', which='major', labelsize=LABEL_SIZE)
-    ax.tick_params(axis='both', which='minor', labelsize=LABEL_SIZE)
-    ax.xaxis.set_ticks_position('none') 
-    ax.yaxis.set_ticks_position('none') 
-    ax.set_xlabel(ax.get_xlabel(), fontsize=LABEL_SIZE)
-    ax.set_ylabel(ax.get_ylabel(), fontsize=LABEL_SIZE)
-    ax.yaxis.offsetText.set_fontsize(LABEL_SIZE)
-
-def plot_accelerometer_events(data, fs, color, axis, error_bar= "se", padding_for="onset"):
+def plot_accelerometer_events(data, color, axis, error_bar= "se"):
 
     if(len(data)!=0):
         
         assert error_bar in ["sd", "se"], f'Please choose error bar as standard deviation:"sd" or standard error: "se"'
-        assert padding_for in ["onset", "offset"], f'Please choose padding_for as "onset" or "offset"'
-        
-        # Find the maximum length among all arrays
-        max_length  = max(len(arr) for arr in data) 
-    
-        # Pad arrays to make them all the same length
-        # padding the end
-        if(padding_for=="onset"):
-            data_padded = [np.pad(arr, (0, max_length - len(arr)), mode='constant') for arr in data]
-            t  = np.linspace(-1, max_length/fs, max_length)
-        elif(padding_for=="offset"):
-            data_padded = [np.pad(arr, (max_length - len(arr), 0), mode='constant') for arr in data]
-            t  = np.linspace(-max_length/fs, 1, max_length)
         
         # Compute the mean and error_bar (standard deviation or standard error)
-        mean_data   = np.mean(data_padded, axis=0)
+        mean_data   = np.mean(data, axis=0)
 
         # define upper and lower bondaries of y axis
         y_axis_upper = max(mean_data) * 1.25
         y_axis_lower = min(mean_data) * 1.25
     
         if(error_bar=="sd"):
-            error       = np.std(data_padded, axis=0)
+            error       = np.std(data, axis=0)
             error_label = "standard deviation"
         elif(error_bar=="se"):
-            error       = 2 * np.std(data_padded, axis=0) / np.sqrt(len(data))
+            error       = 2 * np.std(data, axis=0) / np.sqrt(len(data))
             error_label = "standard error"
-        
+
+        t  = np.linspace(-2, 2, 4*512)
         # plot
         axis.plot(t, mean_data, label='mean', c=color, linewidth=1)
         axis.fill_between(t, mean_data - error, mean_data + error, alpha=0.2, color=color, label=error_label)
@@ -95,54 +50,49 @@ def plot_accelerometer_events(data, fs, color, axis, error_bar= "se", padding_fo
         return axis
     else:
         return axis
+        
+def plot_accelerometer_events_for_event_category(dataset, event_category, figure_name):
 
-def plot_accelerometer_events_by_category(accelerometer_events, kinematics, colors, figure_name):
-    
-    plt  = get_figure_template()
-    
-    ax1  = plt.subplot2grid((75, 40), (0, 0)  , colspan=18, rowspan=15)
-    ax2  = plt.subplot2grid((75, 40), (0, 25) , colspan=18, rowspan=15)
-    ax3  = plt.subplot2grid((75, 40), (20, 0) , colspan=18, rowspan=15)
-    ax4  = plt.subplot2grid((75, 40), (20, 25), colspan=18, rowspan=15)
+    plt  = utils_plotting.get_figure_template()
+    ax1  = plt.subplot2grid((75, 40), (0, 0)  , colspan=19, rowspan=15)
+    ax2  = plt.subplot2grid((75, 40), (0, 21) , colspan=19, rowspan=15)
 
-    # onset aligned
-    category  = "tapping"
-    plot_accelerometer_events(accelerometer_events[category]["all"]["onset"], kinematics.fs, axis=ax1, 
-                                             color=colors[category]["moderate"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[category]["all"]["offset"], kinematics.fs, axis=ax3, 
-                                             color=colors[category]["moderate"], padding_for="offset")
+    dataset_noLID        = dataset[(dataset.event_category == event_category) & (dataset.dyskinesia_total == "none")]
+    dataset_LID          = dataset[(dataset.event_category == event_category) & (dataset.dyskinesia_total != "none")]
     
-    category  = "involuntary_movement"
-    plot_accelerometer_events(accelerometer_events[category]["all"]["onset"], kinematics.fs, axis=ax2, 
-                                             color=colors[category]["moderate"], padding_for="onset")
-    plot_accelerometer_events(accelerometer_events[category]["all"]["offset"], kinematics.fs, axis=ax4, 
-                                             color=colors[category]["moderate"], padding_for="offset")
+    dataset_noLID_onset  = []
+    dataset_noLID_offset = []
+    dataset_LID_onset    = []   
+    dataset_LID_offset   = []
     
-    set_axis(ax1)
-    set_axis(ax2)
-    set_axis(ax3)
-    set_axis(ax4)
+    for index, row in dataset_LID.iterrows():
+        dataset_LID_onset.append(row["event_onset_aligned"])
+        dataset_LID_offset.append(row["event_offset_aligned"])
 
-    ax1.set_title("Tapping"    , fontsize=LABEL_SIZE_title, weight="bold")
-    ax2.set_title("Involuntary Movements"  , fontsize=LABEL_SIZE_title, weight="bold")
-    ax1.set_ylabel("Accelerometer", fontsize=LABEL_SIZE_title)
-    ax3.set_ylabel("Accelerometer", fontsize=LABEL_SIZE_title)
+    for index, row in dataset_noLID.iterrows():
+        dataset_noLID_onset.append(row["event_onset_aligned"])
+        dataset_noLID_offset.append(row["event_offset_aligned"])
+
+    ax1  = plot_accelerometer_events(dataset_noLID_onset, axis=ax1, color=utils_plotting.colors["no_LID"])
+    ax1  = plot_accelerometer_events(dataset_LID_onset, axis=ax1, color=utils_plotting.colors[event_category]["severe"])
+
+    ax2  = plot_accelerometer_events(dataset_noLID_offset, axis=ax2, color=utils_plotting.colors["no_LID"])
+    ax2  = plot_accelerometer_events(dataset_LID_offset, axis=ax2, color=utils_plotting.colors[event_category]["severe"])
+
+    utils_plotting.set_axis(ax1)
+    utils_plotting.set_axis(ax2)
+
+    ax1.set_title("Tapping [Onset Aligned]", fontsize=utils_plotting.LABEL_SIZE_label, weight="bold")
+    ax2.set_title("Tapping [Offset Aligned]", fontsize=utils_plotting.LABEL_SIZE_label, weight="bold")
     
     ax1.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
     ax2.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
-    ax3.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
-    ax4.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
-    
-    ax1.set_xlim([-1,3])
-    ax2.set_xlim([-1,3])
-    ax3.set_xlim([-3,1])
-    ax4.set_xlim([-3,1])
-    
-    ax1.set_ylim([0, 1.5e-06])
-    ax2.set_ylim([0, 1.5e-06])
-    ax3.set_ylim([0, 1.5e-06])
-    ax4.set_ylim([0, 1.5e-06])
-    
+    ax1.set_xlim([-2,2])
+    ax2.set_xlim([-2,2])
+    ax1.set_ylim([0, 1e-06])
+    ax2.set_ylim([0, 1e-06])
+
+    ax2.set_yticklabels("")
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
@@ -295,3 +245,153 @@ def plot_average_spectogram_for_event_category(accelerometer_events, time_vector
 
     ax1.set_title("Tapping"              , fontsize=LABEL_SIZE_title, weight="bold")
     ax2.set_title("Involuntary Movements", fontsize=LABEL_SIZE_title, weight="bold")
+
+def plot_CDRS_evolution_panel(CDRS_time, CDRS_score, CDRS_type, ax):
+    
+    for i in range(len(CDRS_time)):
+    
+        period = CDRS_time[i]
+        score  = CDRS_score[i]
+
+        if(CDRS_type=="arm"):
+            if(score==0):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["none"], alpha=0.25)
+            elif(score==1):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["mild"], alpha=1)
+            elif(score==2):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["moderate"], alpha=1)
+            elif(score==3):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["severe"], alpha=1)
+            elif(score==4):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["extreme"], alpha=1)
+                
+        if(CDRS_type=="total"):
+
+            if(score==0):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["none"], alpha=0.25)
+            elif((score>0) & (score<=4)):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["mild"], alpha=1)
+            elif((score>4) & (score<=8)):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["moderate"], alpha=1)
+            elif((score>8) & (score<=12)):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["severe"], alpha=1)
+            elif(score>12):
+                ax.axvspan(period[0], period[1], color=utils_plotting.colors["voluntary"]["extreme"], alpha=1)
+
+def plot_patient_activity(EVENTS_HISTORY, SUB):
+
+    # check if the personal figure directory of the patient does exist, if not create
+    directory = DATA_IO.path_figure + SUB
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    # get all the indices
+    indices                      = {}
+    t_period                     = {}
+    scores                       = {}
+
+    indices["tapping"]           = utils_accelerometer.find_event_segments_indices(EVENTS_HISTORY.period_tap)
+    indices["rest"]              = utils_accelerometer.find_event_segments_indices(EVENTS_HISTORY.period_rest)
+    indices["free"]              = utils_accelerometer.find_event_segments_indices(EVENTS_HISTORY.period_free)
+    t_period["tapping"]          = utils_accelerometer.find_timepoint_from_indices(EVENTS_HISTORY.times, indices["tapping"] )
+    t_period["rest"]             = utils_accelerometer.find_timepoint_from_indices(EVENTS_HISTORY.times, indices["rest"] )
+    t_period["free"]             = utils_accelerometer.find_timepoint_from_indices(EVENTS_HISTORY.times, indices["free"] )
+
+    # plotting part
+
+    plt        = utils_plotting.get_figure_template()
+    
+    ax_task    = plt.subplot2grid((80, 40), (0, 0), colspan=40, rowspan=2)
+    
+    ax_CDRS    = list(range(10))
+    ax_CDRS[0] = plt.subplot2grid((80, 40), (3, 0), colspan=40, rowspan=2)
+    ax_CDRS[1] = plt.subplot2grid((80, 40), (5, 0), colspan=40, rowspan=2)
+    ax_CDRS[2] = plt.subplot2grid((80, 40), (7, 0), colspan=40, rowspan=2)  
+    
+    ax_vol_r   = plt.subplot2grid((80, 40), (10, 0), colspan=40, rowspan=3)
+    ax_vol_l   = plt.subplot2grid((80, 40), (13, 0), colspan=40, rowspan=3)
+    ax_invol_r = plt.subplot2grid((80, 40), (16, 0), colspan=40, rowspan=3)
+    ax_invol_l = plt.subplot2grid((80, 40), (19, 0), colspan=40, rowspan=3)
+    
+    # task periods
+    for period in t_period["tapping"]:
+        ax_task.axvspan(period[0]/60, period[1]/60, color=utils_plotting.colors["tapping"], alpha=1)
+    
+    for period in t_period["rest"]:
+        ax_task.axvspan(period[0]/60, period[1]/60, color=utils_plotting.colors["rest"], alpha=1)
+    
+    for period in t_period["free"]:
+        ax_task.axvspan(period[0]/60, period[1]/60, color=utils_plotting.colors["free"], alpha=1)
+    
+    # right hand voluntary movements
+    ax_vol_r = sns.lineplot(x=EVENTS_HISTORY.times/60, y=EVENTS_HISTORY.right_voluntary_movements, ax=ax_vol_r, 
+                           color=utils_plotting.colors["voluntary"]["moderate"])
+    
+    # left hand voluntary movements
+    ax_vol_l = sns.lineplot(x=EVENTS_HISTORY.times/60, y=EVENTS_HISTORY.left_voluntary_movements, ax=ax_vol_l, 
+                           color=utils_plotting.colors["voluntary"]["moderate"])
+    
+    # right hand voluntary movements
+    ax_invol_r = sns.lineplot(x=EVENTS_HISTORY.times/60, y=EVENTS_HISTORY.right_involuntary_movements, ax=ax_invol_r, 
+                              color=utils_plotting.colors["involuntary"]["moderate"])
+    
+    # left hand voluntary movements
+    ax_invol_l = sns.lineplot(x=EVENTS_HISTORY.times/60, y=EVENTS_HISTORY.left_involuntary_movements, ax=ax_invol_l, 
+                              color=utils_plotting.colors["involuntary"]["moderate"])
+    
+    plot_CDRS_evolution_panel(EVENTS_HISTORY.CDRS_right_hand_indexes, EVENTS_HISTORY.CDRS_right_hand_scores, "arm", ax_CDRS[0])
+    plot_CDRS_evolution_panel(EVENTS_HISTORY.CDRS_left_hand_indexes , EVENTS_HISTORY.CDRS_left_hand_scores, "arm", ax_CDRS[1])
+    plot_CDRS_evolution_panel(EVENTS_HISTORY.CDRS_total_indexes     , EVENTS_HISTORY.CDRS_total_scores, "total", ax_CDRS[2])
+    
+    ax_task.set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_task.set_xticklabels("")
+    ax_task.set_yticklabels("")
+    ax_task.set_ylabel("task", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_CDRS[0].set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_CDRS[0].set_xticklabels("")
+    ax_CDRS[0].set_yticklabels("")
+    ax_CDRS[0].set_ylabel("CDRS right arm", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_CDRS[1].set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_CDRS[1].set_xticklabels("")
+    ax_CDRS[1].set_yticklabels("")
+    ax_CDRS[1].set_ylabel("CDRS left arm", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_CDRS[2].set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_CDRS[2].set_xticklabels("")
+    ax_CDRS[2].set_yticklabels("")
+    ax_CDRS[2].set_ylabel("CDRS total", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_vol_r.set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_vol_r.set_xticklabels("")
+    ax_vol_r.set_yticklabels("")
+    ax_vol_r.set_ylabel("right \n tapping", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_vol_l.set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_vol_l.set_xticklabels("")
+    ax_vol_l.set_yticklabels("")
+    ax_vol_l.set_ylabel("left \n tapping", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_invol_r.set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_invol_r.set_xticklabels("")
+    ax_invol_r.set_yticklabels("")
+    ax_invol_r.set_ylabel("right \n involuntary", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    ax_invol_l.set_xlim([np.min(EVENTS_HISTORY.times)/60, np.max(EVENTS_HISTORY.times)/60])
+    ax_invol_l.set_xticklabels(ax_invol_l.get_xticklabels(), fontsize=utils_plotting.LABEL_SIZE_label)
+    ax_invol_l.set_yticklabels("")
+    ax_invol_l.set_ylabel("left \n involuntary", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    ax_invol_l.set_xlabel("time (min)", fontsize=utils_plotting.LABEL_SIZE_label, rotation=0)
+    
+    utils_plotting.set_axis(ax_task)
+    utils_plotting.set_axis(ax_vol_r)
+    utils_plotting.set_axis(ax_vol_l)
+    utils_plotting.set_axis(ax_invol_r)
+    utils_plotting.set_axis(ax_invol_l)
+    utils_plotting.set_axis(ax_CDRS[0])
+    utils_plotting.set_axis(ax_CDRS[1])
+    utils_plotting.set_axis(ax_CDRS[2])
+
+    plt.savefig(directory + "/recording_session.png", dpi=300)
+

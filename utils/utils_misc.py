@@ -49,3 +49,6 @@ def combine_dictionaries(dict1, dict2):
             raise ValueError("The structure of the dictionaries is not consistent.")
 
     return combined_dict
+
+def combine_dataframes(df1, df2):
+    return pd.concat([df1, df2], ignore_index=True)

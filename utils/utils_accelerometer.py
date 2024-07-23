@@ -27,7 +27,7 @@ def create_event_segment_dictionary(dataset, kinematics, fs, segment):
                 
     return acc_events
 
-def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation):
+def create_accelerometer_event_dictionary(dataset, kinematic, fs, dyskinesia_strategy, t_observation):
     
     acc_events = {}
 
@@ -49,7 +49,7 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
 
                     # get aligned event arrays for the selected combination
                     events = kinematic.extract_accelerometer_events(dataset, event_category=event_category, dyskinesia_score=severity, 
-                                                                    alignment=alignment, t_observation=t_observation)
+                                                                    alignment=alignment, dyskinesia_strategy=dyskinesia_strategy, t_observation=t_observation)
                     acc_events[event_category][severity][alignment] = events
             else:
                 
@@ -59,7 +59,8 @@ def create_accelerometer_event_dictionary(dataset, kinematic, fs, t_observation)
                 for alignment in ["onset", "offset"]:
 
                     # get aligned event arrays for the selected combination
-                    events      = kinematic.extract_accelerometer_events(dataset, event_category=event_category, alignment=alignment, t_observation=t_observation)
+                    events      = kinematic.extract_accelerometer_events(dataset, event_category=event_category, alignment=alignment, 
+                                                                         dyskinesia_strategy=dyskinesia_strategy, t_observation=t_observation)
 
                     acc_events[event_category]["all"][alignment] = events
                 
@@ -97,3 +98,56 @@ def get_event_time_vector(data, fs, alignment):
     # if the events aligned for their offset, pad the beginning
     elif(alignment=="offset"):
         return np.linspace(-data_length/fs + 1, 1, data_length)
+
+# two functions utilized for plotting of patient experimental periods, CDRS scores and movements
+def find_event_segments_indices(array):
+    sections = []
+    start = None
+
+    for i in range(len(array)):
+        if array[i] == 1:
+            if start is None:
+                start = i
+        else:
+            if start is not None:
+                sections.append((start, i - 1))
+                start = None
+
+    if start is not None:
+        sections.append((start, len(array) - 1))
+
+    return sections
+
+def find_timepoint_from_indices(data_array, indices):
+    pairs = []
+    for start, end in indices:
+        pair = (data_array[start], data_array[end])
+        pairs.append(pair)
+    return pairs
+
+# For given patient event history, it gets the extracts interval (start and finish time) and dyskinesia severity in the selected body part
+def get_CDRS_evaluation_intervals(EVENTS_HISTORY, body_part):
+
+    times           = EVENTS_HISTORY.CDRS_dataframe.dopa_time.to_list()
+    scores          = EVENTS_HISTORY.CDRS_dataframe[body_part].to_list()
+    
+    previous_score  = scores[0]
+    previous_time   = times[0]
+    intervals_time  = []
+    intervals_score = []
+    
+    for i in range(len(scores)):
+        if(scores[i] != previous_score):
+            intervals_time.append((previous_time, (times[i] + times[i-1])/2))
+            intervals_score.append(previous_score)
+            previous_score = scores[i]
+            previous_time  = (times[i] + times[i-1])/2
+    
+    intervals_time.append((previous_time, times[-1]))
+    intervals_score.append(scores[-1])
+
+    # recordings length and last evaluation time don't always match. After the last CDRS evaluation, if the recording continues, the last evaluation will be kept until the end of the recording period.
+    intervals_time.append((times[-1], np.max(EVENTS_HISTORY.times)/60))
+    intervals_score.append(scores[-1])
+    
+    return intervals_time, intervals_score

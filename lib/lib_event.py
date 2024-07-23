@@ -40,7 +40,6 @@ class EVENTS:
         self.left_move      = self.__dat.data[:,self.__dat.colnames.index('left_move')]
         self.right_move     = self.__dat.data[:,self.__dat.colnames.index('right_move')]
         self.bilateral_move = np.array([a & b for a, b in zip(self.left_move.astype(int).tolist(), self.right_move.astype(int).tolist())])
-        self.bilateral_tap  = np.array([a & b for a, b in zip(self.left_tap.astype(int).tolist(), self.right_tap.astype(int).tolist())])
         self.no_move        = self.__dat.data[:,self.__dat.colnames.index('no_move')]
         self.period_rest    = (self.task == "rest").astype(int)
         self.period_free    = (self.task == "free").astype(int)
@@ -87,7 +86,7 @@ class EVENTS:
     def __operator_event_union(self, array_A, array_B):
         """
         Description
-            This method finds events that occurred either in array_A or array_B (or operator). The two arrays were expected to have the same length
+            This method finds events in array_A or array_B (or operator). The two arrays were expected to have the same length
 
         Input
             array_A: A binary list represents the existence of event=1 and absence=0.
@@ -108,12 +107,50 @@ class EVENTS:
         Output
             The definitions of events are added as a class field that can be accessible.
         """
-        self.left_voluntary_tap          = self.__operator_event_intersection(self.__operator_event_difference(self.left_tap, self.left_move), self.period_tap)
-        self.left_involuntary_movements  = self.__operator_event_difference(self.left_move, self.left_tap)
-        self.right_voluntary_tap         = self.__operator_event_intersection(self.__operator_event_difference(self.right_tap, self.right_move), self.period_tap)
-        self.right_involuntary_movements = self.__operator_event_difference(self.right_move, self.right_tap)
+        self.left_voluntary_movements    = self.__operator_event_intersection(self.__operator_event_difference(self.left_tap, self.left_move), self.period_tap)
+        self.left_involuntary_movements  = self.__operator_event_intersection(self.__operator_event_difference(self.left_move, self.left_tap), self.period_rest)
+        self.right_voluntary_movements   = self.__operator_event_intersection(self.__operator_event_difference(self.right_tap, self.right_move), self.period_tap)
+        self.right_involuntary_movements = self.__operator_event_intersection(self.__operator_event_difference(self.right_move, self.right_tap), self.period_rest)
+
+        # remove possible bilateral voluntary movements
+        self.left_voluntary_movements    = self.__operator_event_difference(self.left_voluntary_movements, self.right_voluntary_movements)
+        self.right_voluntary_movements   = self.__operator_event_difference(self.right_voluntary_movements, self.left_voluntary_movements)
 
 
+    def __get_CDRS_evaluation_intervals(self, body_part):
+
+        """
+        Description
+            The method extracts the indexes of dyskinesia evaluations and corresponding score for the selected body part.
+        """
+        times           = self.CDRS_dataframe.dopa_time.to_list()
+        scores          = self.CDRS_dataframe[body_part].to_list()
+        
+        previous_score  = scores[0]
+        previous_time   = times[0]
+        intervals_time  = []
+        intervals_score = []
+
+        intervals_time.append((np.min(self.times)/60, times[0]))
+        intervals_score.append(scores[0])
+        
+        for i in range(len(scores)):
+            if(scores[i] != previous_score):
+                intervals_time.append((previous_time, (times[i] + times[i-1])/2))
+                intervals_score.append(previous_score)
+                previous_score = scores[i]
+                previous_time  = (times[i] + times[i-1])/2
+        
+        intervals_time.append((previous_time, times[-1]))
+        intervals_score.append(scores[-1])
+    
+        # recordings length and last evaluation time don't always match. After the last CDRS evaluation, if the recording continues, 
+        # The last evaluation will be kept until the end of the recording period.
+        intervals_time.append((times[-1], np.max(self.times)/60))
+        intervals_score.append(scores[-1])
+        
+        return intervals_time, intervals_score
+    
     def get_dyskinesia_scores(self):
         """
         Description
@@ -142,51 +179,13 @@ class EVENTS:
                      'CDRS_total_right', 'CDRS_total_left', 'CDRS_total']]
         
         CDRS.dropna(inplace=True)
+        self.CDRS_dataframe = CDRS
 
-        self.__CDRS_dataframe = CDRS
+        self.CDRS_right_hand_indexes, self.CDRS_right_hand_scores  = self.__get_CDRS_evaluation_intervals("CDRS_upper_right")
+        self.CDRS_left_hand_indexes, self.CDRS_left_hand_scores    = self.__get_CDRS_evaluation_intervals("CDRS_upper_left")
+        self.CDRS_total_indexes, self.CDRS_total_scores            = self.__get_CDRS_evaluation_intervals("CDRS_total")
 
-        
-        t_CDRS      = CDRS.dopa_time.to_numpy()             # get the timestamp of evaluation time (an array in minutes) 
-        
-        # Find the indices where t_CDRS <= t
-        # self.times / 60: to represent recording times in minutes instead of seconds
-        CDRS_times       = np.searchsorted(CDRS.dopa_time, self.times / 60) # find the indices of evaluation times in the time array
-        CDRS_times       = CDRS_times-1
-        
-        CDRS_face        = CDRS_times.copy()
-        CDRS_neck        = CDRS_times.copy()
-        CDRS_trunk       = CDRS_times.copy()
-        CDRS_upper_right = CDRS_times.copy()
-        CDRS_upper_left  = CDRS_times.copy()
-        CDRS_lower_right = CDRS_times.copy()
-        CDRS_lower_left  = CDRS_times.copy()
-        CDRS_total_right = CDRS_times.copy()
-        CDRS_total_left  = CDRS_times.copy()
-        CDRS_total       = CDRS_times.copy()
 
-        for index in CDRS.index:
-            CDRS_face[CDRS_face==index]               = CDRS.iloc[index].CDRS_face
-            CDRS_neck[CDRS_neck==index]               = CDRS.iloc[index].CDRS_neck
-            CDRS_trunk[CDRS_trunk==index]             = CDRS.iloc[index].CDRS_trunk
-            CDRS_upper_right[CDRS_upper_right==index] = CDRS.iloc[index].CDRS_upper_right
-            CDRS_upper_left[CDRS_upper_left==index]   = CDRS.iloc[index].CDRS_upper_left
-            CDRS_lower_right[CDRS_lower_right==index] = CDRS.iloc[index].CDRS_lower_right
-            CDRS_lower_left[CDRS_lower_left==index]   = CDRS.iloc[index].CDRS_lower_left
-            CDRS_total_right[CDRS_total_right==index] = CDRS.iloc[index].CDRS_total_right
-            CDRS_total_left[CDRS_total_left==index]   = CDRS.iloc[index].CDRS_total_left
-            CDRS_total[CDRS_total==index]             = CDRS.iloc[index].CDRS_total
-            
-        # Take values at found indices
-        self.CDRS_face        = CDRS_face
-        self.CDRS_neck        = CDRS_neck
-        self.CDRS_trunk       = CDRS_trunk
-        self.CDRS_upper_right = CDRS_upper_right 
-        self.CDRS_upper_left  = CDRS_upper_left 
-        self.CDRS_lower_right = CDRS_lower_right 
-        self.CDRS_lower_left  = CDRS_lower_left 
-        self.CDRS_total_right = CDRS_total_right 
-        self.CDRS_total_left  = CDRS_total_left 
-        self.CDRS_total       = CDRS_total 
 
     def __get_event_indices(self, array):
         """
@@ -219,7 +218,7 @@ class EVENTS:
         
         return event_indices
 
-    def __populate_dataframe(self, dataset, patient, laterality, event_indices, event_type):
+    def __populate_dataframe(self, dataset, patient, laterality, event_indices, event_category):
 
         """
         Description
@@ -247,23 +246,49 @@ class EVENTS:
 
             if(event_start_i!=event_end_i):
     
-                # get the corresponding tasks that were patient conducting during the event
-                event_tasks   = self.task[event_start_i:event_end_i].tolist()
-                # assing event to specific task [rest, tapping, free] based on the majority of duration passed for a given event
-                event_task    = max(set(event_tasks), key=event_tasks.count) 
                 # add event to the dataset
-                dataset.loc[len(dataset)] = {"patient": patient, 
-                                             "laterality": laterality, 
-                                             "event": event_type, 
-                                             "task": event_task,
-                                             "event_no": "p_" + patient + "_" + laterality + "_" + event_type + str(counter),
-                                             "event_start_index" : event_start_i, 
+                dataset.loc[len(dataset)] = {"patient"            : patient, 
+                                             "laterality"         : laterality, 
+                                             "event_no": "p_" + patient + "_" + laterality + "_" + event_category + str(counter),
+                                             "event_category"     : event_category,       
+                                             "event_start_index"  : event_start_i, 
                                              "event_finish_index" : event_end_i, 
-                                             "event_start_time" : self.times[event_start_i]/60, 
-                                             "event_finish_time" : self.times[event_end_i]/60, 
-                                             "duration": self.times[event_end_i] - self.times[event_start_i]}
+                                             "event_start_time"   : self.times[event_start_i]/60, 
+                                             "event_finish_time"  : self.times[event_end_i]/60, 
+                                             "duration"           : self.times[event_end_i] - self.times[event_start_i]}
                 counter += 1
 
+    def __get_event_CDRS_score(self, events, scores, event_start_time):
+        for i in range(len(events)):
+            start, end = events[i]
+            if start <= event_start_time < end:
+                return scores[i]
+
+    def __get_dyskinesia_label_arm_strategy(self, arm_score, total_score):
+        if(total_score==0):
+            return "none"
+        else:
+            if(arm_score==1):
+                return "mild"
+            elif(arm_score==2):
+                return "moderate"
+            elif(arm_score==3):
+                return "severe"
+            elif(arm_score==4):
+                return "extreme"
+
+    def __get_dyskinesia_label_total_strategy(self, arm_score, total_score):
+        if(total_score==0):
+            return "none"
+        else:
+            if(arm_score>0):
+                if(total_score<=4):
+                    return "mild"
+                elif((total_score>4) & (total_score<=8)) :
+                    return "moderate"
+                elif((total_score>8)):
+                    return "severe"
+               
     def get_event_dataframe(self):
 
         """
@@ -282,99 +307,40 @@ class EVENTS:
             dataset: The more populated version of the given dataframe structure
         """
         # get start and finish indices of different event types in different hands
-        left_moves        = self.__get_event_indices(self.left_move.tolist())
-        left_tapping      = self.__get_event_indices(self.left_tap.tolist())
-        right_moves       = self.__get_event_indices(self.right_move.tolist())
-        right_tapping     = self.__get_event_indices(self.right_tap.tolist())
-        bilateral_moves   = self.__get_event_indices(self.bilateral_move.tolist())
-        bilateral_tapping = self.__get_event_indices(self.bilateral_tap.tolist())
-
+        right_voluntary   = self.__get_event_indices(self.right_involuntary_movements)
+        left_voluntary    = self.__get_event_indices(self.left_voluntary_movements)
+        right_involuntary = self.__get_event_indices(self.left_involuntary_movements)
+        left_involuntary  = self.__get_event_indices(self.left_involuntary_movements)  
+        
         # create an empty event dataframe
-        events = pd.DataFrame(columns=["patient", "laterality", "event", "task", "event_no", "event_start_index", "event_finish_index", 
-                                       "event_start_time", "event_finish_time", "duration"])   
+        events = pd.DataFrame(columns=["patient", "laterality", "event_no", "event_category", "event_start_index", 
+                                       "event_finish_index", "event_start_time", "event_finish_time", "duration", 
+                                       "CDRS_right_hand", "CDRS_left_hand", "CDRS_total",
+                                       "dyskinesia_arm", "dyskinesia_total"])   
 
         # populate the empty dataframe
-        self.__populate_dataframe(events, self.__SUB, "left"     , left_moves       , "move")
-        self.__populate_dataframe(events, self.__SUB, "left"     , left_tapping     , "tap")
-        self.__populate_dataframe(events, self.__SUB, "right"    , right_moves      , "move")
-        self.__populate_dataframe(events, self.__SUB, "right"    , right_tapping    , "tap")
-        self.__populate_dataframe(events, self.__SUB, "bilateral", bilateral_moves  , "move" )
-        self.__populate_dataframe(events, self.__SUB, "bilateral", bilateral_tapping, "tap" )								
+        self.__populate_dataframe(events, self.__SUB, "right" , right_voluntary   , "voluntary")
+        self.__populate_dataframe(events, self.__SUB, "left"  , left_voluntary    , "voluntary")
+        self.__populate_dataframe(events, self.__SUB, "right" , right_involuntary , "involuntary")
+        self.__populate_dataframe(events, self.__SUB, "left"  , left_involuntary  , "involuntary")							
 
-        # define dyskinesia_score column
-        events["CDRS_face"]        = 0
-        events["CDRS_neck"]        = 0
-        events["CDRS_trunk"]       = 0
-        events["CDRS_upper_right"] = 0
-        events["CDRS_lower_right"] = 0
-        events["CDRS_upper_left"]  = 0
-        events["CDRS_lower_left"]  = 0
-        events["CDRS_total_right"] = 0
-        events["CDRS_total_left"]  = 0
-        events["CDRS_total"]       = 0
         
         # for each index check the laterality and get the corresponding dyskinesia score on the event onset
         for index in events.index:
-            events.loc[index, ['CDRS_face']]        = self.CDRS_face[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_neck']]        = self.CDRS_neck[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_trunk']]       = self.CDRS_trunk[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_upper_right']] = self.CDRS_upper_right[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_lower_right']] = self.CDRS_lower_right[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_upper_left']]  = self.CDRS_upper_left[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_lower_left']]  = self.CDRS_lower_left[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_total_right']] = self.CDRS_total_right[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_total_left']]  = self.CDRS_total_left[events.iloc[index].event_start_index]
-            events.loc[index, ['CDRS_total']]       = self.CDRS_total[events.iloc[index].event_start_index]
-            
-        # define if the movement is voluntary or not as a column
-        events["is_voluntary"]  = False
-        events.loc[(events.event == "tap") & (events.task == "tap"), 'is_voluntary'] = True
-        
-        # add event categories to the dataframe
-        events = self.__define_event_categories(events)
+            events.loc[index, ['CDRS_right_hand']] = self.__get_event_CDRS_score(self.CDRS_right_hand_indexes, self.CDRS_right_hand_scores, events.iloc[index].event_start_time)
+            events.loc[index, ['CDRS_left_hand']]  = self.__get_event_CDRS_score(self.CDRS_left_hand_indexes, self.CDRS_left_hand_scores, events.iloc[index].event_start_time)
+            events.loc[index, ['CDRS_total']]      = self.__get_event_CDRS_score(self.CDRS_total_indexes, self.CDRS_total_scores, events.iloc[index].event_start_time)
 
-        # combine the score of two hands
-        events['CDRS_total_hands'] = events['CDRS_upper_right'] + events['CDRS_upper_left']
-        
-        # map numerical values to severity equivalents
-        events['CDRS_face']        = events['CDRS_face'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_neck']        = events['CDRS_neck'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_trunk']       = events['CDRS_trunk'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_right_hand']  = events['CDRS_upper_right'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_right_leg']   = events['CDRS_lower_right'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_left_hand']   = events['CDRS_upper_left'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_left_leg']    = events['CDRS_lower_left'].map({0:'none', 1:'mild', 2:'moderate', 3:'severe', 4:'extreme'})
-        events['CDRS_total_hands'] = pd.cut(events['CDRS_total_hands'], bins=[-1, 0, 2, 4, 6, 8], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
-        events['CDRS_total_right'] = pd.cut(events['CDRS_total_right'], bins=[-1, 0, 2, 4, 6, 8], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
-        events['CDRS_total_left']  = pd.cut(events['CDRS_total_left'], bins=[-1, 0, 2, 4, 6, 8], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
-        events['CDRS_total']       = pd.cut(events['CDRS_total'], bins=[-1, 0, 7, 14, 21, 28], labels=['none', 'mild', 'moderate', 'severe', 'extreme'])
-        
-        events = events[['patient', 'laterality', 'event_no', 'event', 'task', 'is_voluntary',
-                         'event_category', 'event_start_index', 'event_finish_index',
-                         'event_start_time', 'event_finish_time', 'duration', 'CDRS_face',
-                         'CDRS_neck', 'CDRS_trunk', 'CDRS_right_hand',
-                         'CDRS_right_leg', 'CDRS_left_hand', 'CDRS_left_leg',
-                         'CDRS_total_hands', 'CDRS_total_right', 'CDRS_total_left', 'CDRS_total']]
+            if(events.loc[index, 'laterality']=="right"):
+                events.loc[index, ['dyskinesia_arm']] = self.__get_dyskinesia_label_arm_strategy(events.loc[index, 'CDRS_right_hand'], events.loc[index, 'CDRS_total'])
+                events.loc[index, ['dyskinesia_total']] = self.__get_dyskinesia_label_total_strategy(events.loc[index, 'CDRS_right_hand'], events.loc[index, 'CDRS_total'])
+            else:
+                events.loc[index, ['dyskinesia_arm']] = self.__get_dyskinesia_label_arm_strategy(events.loc[index, 'CDRS_left_hand'], events.loc[index, 'CDRS_total'])
+                events.loc[index, ['dyskinesia_total']] = self.__get_dyskinesia_label_total_strategy(events.loc[index, 'CDRS_left_hand'], events.loc[index, 'CDRS_total'])
+                 
         return events
     
-    def get_CDRS_dataframe(self):
-        return self.__CDRS_dataframe
 
-    def __define_event_categories(self, dataset):
-    
-        def categorize_event(row):
-            if (row['event'] == 'tap' and row['task'] == 'tap') : return 'tapping'
-            #elif (row['event'] == 'tap' and row['task'] != 'tap'): return 'involuntary_tapping'
-            else : return 'involuntary_movement'
-            
-            
-    
-        # Apply the function to create the new column 'event_category'
-        dataset['event_category'] = dataset.apply(categorize_event, axis=1)
-        dataset                   = dataset[['patient', 'laterality', 'event_no', 'event', 'task', 'is_voluntary', 'event_category', 'event_start_index', 
-                                             'event_finish_index', 'event_start_time', 'event_finish_time', 'duration', 'CDRS_face', 'CDRS_neck', 'CDRS_trunk',
-                                             'CDRS_upper_right','CDRS_lower_right','CDRS_upper_left','CDRS_lower_left','CDRS_total_right','CDRS_total_left','CDRS_total']]
-        return dataset
         
 
 
