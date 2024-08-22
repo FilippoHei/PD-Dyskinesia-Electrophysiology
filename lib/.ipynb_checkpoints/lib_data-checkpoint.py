@@ -51,4 +51,21 @@ class DATA_IO:
         return self.__data
 
 
+def load_baseline_recordings(recording_type, event_mode, region):
+
+    baseline_recordings = {}
+    SUB_LIST            = utils_misc.get_SUB_list(DATA_IO.path_data) # get the SUB id list which we have a recording of them
+
+    for SUB in SUB_LIST:
+        try:
+            with open(DATA_IO.path_events + "baseline_recordings/" + recording_type + "/" + SUB + "_" + event_mode + "_" + region +".pkl", 'rb') as handle:
+                baseline_recordings[SUB] = {}
+                SUB_baseline             = pickle.load(handle)
+                baseline_recordings[SUB] = SUB_baseline.values()
+        except:
+            print("Patient " + SUB + ": does not have controlateral events")
+    return baseline_recordings
+
+
+
 

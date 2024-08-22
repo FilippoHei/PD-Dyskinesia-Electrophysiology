@@ -7,276 +7,162 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import matplotlib.patches as mpatches
-from scipy.signal import spectrogram
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import os
 
-LABEL_SIZE       = 5
-LABEL_SIZE_label = 6 
-LABEL_SIZE_title = 7 
+# inserting the lib folder to the compiler
+import sys
+sys.path.insert(0, './lib')
 
-# color dataframe
-colors                                 = {}
-colors["voluntary_tapping"]            = {}
-colors["involuntary_movement"]         = {}
+import utils_plotting
 
-colors["voluntary_tapping"]["LID_none"]        = "#FFEA00"
-colors["voluntary_tapping"]["LID_mild"]        = "#EF8A06"
-colors["voluntary_tapping"]["LID_moderate"]    = "#DC2F02"
-colors["voluntary_tapping"]["LID_severe"]      = "#9D0208"
-colors["voluntary_tapping"]["LID_extreme"]     = "#370617"
+def plot_spectogram(spectogram, time_vector, title, normalization_type, cbar, file_path, figure_name):
 
-colors["involuntary_movement"]["LID_none"]     = "#70D8EB"
-colors["involuntary_movement"]["LID_mild"]     = "#00AACC"
-colors["involuntary_movement"]["LID_moderate"] = "#006AA3"
-colors["involuntary_movement"]["LID_severe"]   = "#023579"
-colors["involuntary_movement"]["LID_extreme"]  = "#03045E"
-
-def get_figure_template():
+    cm           = 1/2.54 # centimeters in inches
+    fig, ax_spec = plt.subplots(figsize=(8*cm, 5*cm))
     
-    plt.rc('font', serif="Neue Haas Grotesk Text Pro")
-    fig = plt.figure()
-    fig.tight_layout()
-    cm = 1/2.54  # centimeters in inches
-    plt.subplots(figsize=(18.5*cm, 21*cm))
-    return plt
+    if(normalization_type=="z-score"):
+        c = ax_spec.pcolormesh(time_vector, np.linspace(4, 90, 87), spectogram, shading='gouraud', vmin=-5, vmax=5)
+    elif(normalization_type=="percent"):
+        c = ax_spec.pcolormesh(time_vector, np.linspace(4, 90, 87), spectogram, shading='gouraud', vmin=-50, vmax=100)
 
-def set_axis(ax):
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.tick_params(axis='both', which='major', labelsize=LABEL_SIZE)
-    ax.tick_params(axis='both', which='minor', labelsize=LABEL_SIZE)
-    ax.xaxis.set_ticks_position('none') 
-    ax.yaxis.set_ticks_position('none') 
-    ax.set_xlabel(ax.get_xlabel(), fontsize=LABEL_SIZE)
-    ax.set_ylabel(ax.get_ylabel(), fontsize=LABEL_SIZE)
-    ax.yaxis.offsetText.set_fontsize(LABEL_SIZE)
+    if(cbar==True):
+        colorbar = plt.colorbar(c, ax=ax_spec, label=normalization_type)
+    ax_spec.set_xlabel('time (s)', fontsize=utils_plotting.LABEL_SIZE_label)
+    ax_spec.set_ylabel('frequency (Hz)', fontsize=utils_plotting.LABEL_SIZE_label)
+    ax_spec.set_title(title, fontsize=utils_plotting.LABEL_SIZE_label)
+    utils_plotting.set_axis(ax_spec)
 
+    full_path = file_path + figure_name
 
-def plot_single_event_and_spectogram(event, time_vector, fs, alignment):
+    # Check if the directory exists; if not, create it
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+        print(f"Created directory: {file_path}")
 
-    event = np.array(event)
+    plt.savefig(full_path + ".png", dpi=300)
     
-    plt  = get_figure_template()
-    ax1  = plt.subplot2grid((75, 40), (0, 0) , colspan=18, rowspan=10)
-    ax2  = plt.subplot2grid((75, 40), (11, 0) , colspan=18, rowspan=15)
-
-    # plot event
-    ax1.plot(time_vector, event)
-    ax1.set_yticklabels([])
-    ax1.set_xticklabels([])
-
-    # plot spectogram
-    f, t, Sxx = spectrogram(event, fs=fs, nperseg=int(fs/10))
-    Sxx       = 10 * np.log10(Sxx) # 'Power/Frequency (dB/Hz)'
-
-    if(alignment=="onset"):
-        time_vec_spectogram = t - 1
-        cax = ax2.pcolormesh(time_vec_spectogram, f, Sxx, shading='gouraud', vmin=-230, vmax=-150)
-        ax1.set_xlim([-1,(len(event)/fs)-1])
-        ax2.set_xlim([-1,(len(event)/fs)-1])
-    else:
-        time_vec_spectogram = (t - max(t)) + 1
-        cax = ax2.pcolormesh(time_vec_spectogram, f, Sxx, shading='gouraud', vmin=-230, vmax=-150)
-        ax1.set_xlim([1-(len(event)/fs),1])
-        ax2.set_xlim([1-(len(event)/fs),1])
-        
-    ax1.axvline(x=0, ymin=-1, ymax=1, ls='-', color="dimgrey")
-    ax2.axvline(x=0, ymin=-1, ymax=1, ls='-', color="white")
-    ax1.text(-0.1, ax1.get_ylim()[1]*1.1, 'offset', c="k", fontsize = LABEL_SIZE)
+def plot_patient_channels_cv(df_channel_cv, patient, figure_name):
+    patient_left_channel_cv     = df_channel_cv[(df_channel_cv.patient==patient) & (df_channel_cv.hemisphere=="left")]
+    patient_left_channel_cv.cv  = np.abs(patient_left_channel_cv.cv)
+    patient_left_channel_cv     = patient_left_channel_cv[(patient_left_channel_cv.frequency <=35) | (patient_left_channel_cv.frequency >=60)]
     
-    # Add the colorbar to the new axis
-    divider = make_axes_locatable(ax2)
-    cbar_ax = divider.append_axes("bottom", size="5%", pad=0.5)
-    cbar = plt.colorbar(cax, cax=cbar_ax, orientation='horizontal')
-    cbar.set_label('Power/Frequency (dB/Hz)', fontsize=LABEL_SIZE)
-    cbar.ax.tick_params(labelsize=LABEL_SIZE)
-
-    ax2.set_ylabel('Frequency [Hz]')
-    ax2.set_xlabel('Time [s]')
-    set_axis(ax1)
-    set_axis(ax2)
-    ax2.set_ylim([0,100])
-
-
-def get_average_spectogram(event_array, fs):
-
-    """
-        Description
-            The method measured the average spectrogram for a given set of events based on the Short Time Fourier Series (STFS).
-
-        Input
-            event_array : A double list contains events of a particular event category/condition. Each element corresponds to an event and is 
-                          represented by a list. The duration of each event in this array is the same.
-            fs          : An integer value represents the sampling frequency of events.
-
-        Output
-            avg_Sxx     : A double list, it contains the average spectrogram across N event inevent_array.
-            t           : A double list, time vector corresponds to the average spectrogram.
-            freq        : A double list, frequency list in which average spectrogram created for
-    """
+    patient_right_channel_cv    = df_channel_cv[(df_channel_cv.patient==patient) & (df_channel_cv.hemisphere=="right")]
+    patient_right_channel_cv.cv = np.abs(patient_right_channel_cv.cv)
+    patient_right_channel_cv    = patient_right_channel_cv[(patient_right_channel_cv.frequency <=35) | (patient_right_channel_cv.frequency >=60)]
     
-    # measure average power spectrum
-    Sxx_array = []
-    for i in range(len(event_array)):
-        event           = np.array(event_array[i])
-        freq, time, Sxx = spectrogram(event, fs=fs, nperseg=int(fs/20)) # spectorgrams in 100ms segments
-        Sxx             = 10 * np.log10(Sxx)                            # 'Power/Frequency (dB/Hz)'     
-        Sxx_array.append(Sxx)
-        
-    avg_Sxx = np.average(Sxx_array,axis=0)
+    # pivot the dataframe to get heatmap matrix
+    heatmap_l_data = pd.pivot_table(patient_left_channel_cv, values='cv', index='frequency', columns='channel')
+    heatmap_l_data = heatmap_l_data.iloc[::-1] # inverse the order of frequencies in index
     
-    return avg_Sxx, time, freq
+    heatmap_r_data = pd.pivot_table(patient_right_channel_cv, values='cv', index='frequency', columns='channel')
+    heatmap_r_data = heatmap_r_data.iloc[::-1] # inverse the order of frequencies in index
     
-def get_average_spectogram_panel(event_array, time_vector, fs, alignment, ax, ylabel, colorbar_visibility=False):
-
-    """
-        Description
-            This method plots the average spectrogram of a particular event category based on a provided set of events stored in "event_array" for a given axis. 
-            The event data is sampled with fs frequency and all events should already aligned based on their onset and offset.
-
-        Input
-            event_array        : A double list contains events of a particular event category/condition. Each element corresponds to an event and is 
-                                 represented by a list. The duration of each event in this array is the same.
-            time_vector        : A double list, the time vector belongs to events contained in the event array.
-            fs                 : An integer value represents the sampling frequency of events.
-            aligment           : alignment strategy ("onset" or "offset") used to align events stored in event_array.
-            ax                 : Matplotlib axis, where the plotting will be applied on
-            y_label            : A string, y axis label of the panel
-            colorbar_visibility: Boolean, it set the visibility of color bar for spectrogram values.
-
-        Output
-            return: A panel plotted on given axis
-    """
-    # get average spectrogram for selected event
-    average_spectogram, t, f = get_average_spectogram(event_array, fs)
-
-    # get time vector for spectrogram and plot the spectogram
-    if(alignment=="onset"):
-        time_vec_spectogram = t - 1
-        cax = ax.pcolormesh(time_vec_spectogram, f, average_spectogram, shading='gouraud', vmin=-230, vmax=-150)
-        ax.set_xlim([-1,(len(event_array[0])/fs)-1])
-    else:
-        time_vec_spectogram = (t - max(t)) + 1
-        cax = ax.pcolormesh(time_vec_spectogram, f, average_spectogram, shading='gouraud', vmin=-230, vmax=-150)
-        ax.set_xlim([1-(len(event_array[0])/fs),1])
-
-    # plot a vertical line at x=0 to highlight the alingment
-    ax.axvline(x=0, ymin=-1, ymax=1, ls='-', color="white")
-
-    if(colorbar_visibility==True):
-        # Add the colorbar to the new axis
-        divider = make_axes_locatable(ax)
-        cbar_ax = divider.append_axes("bottom", size="5%", pad=0.5)
-        cbar = plt.colorbar(cax, cax=cbar_ax, orientation='horizontal')
-        cbar.set_label('Power/Frequency (dB/Hz)', fontsize=LABEL_SIZE)
-        cbar.ax.tick_params(labelsize=LABEL_SIZE)
-
-    ax.set_ylim([0,100])
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel(ylabel)
-
-    # adjust the axis parameters
-    set_axis(ax)
+    # start plotting
+    plt         = utils_plotting.get_figure_template()
     
-def plot_average_spectogram_for_event_category(accelerometer_events, time_vector, fs):
+    ax_left_g   = plt.subplot2grid((77, 66), (0, 0)  , colspan=30, rowspan=4)
+    ax_left_bh  = plt.subplot2grid((77, 66), (4, 0)  , colspan=30, rowspan=4)
+    ax_left_bl  = plt.subplot2grid((77, 66), (8, 0)  , colspan=30, rowspan=4)
+    ax_left_a   = plt.subplot2grid((77, 66), (12, 0) , colspan=30, rowspan=4)
+    ax_left_t   = plt.subplot2grid((77, 66), (16, 0) , colspan=30, rowspan=4)
     
-    plt  = get_figure_template()
-
-    ax1  = plt.subplot2grid((75, 40), (0, 0)   , colspan=18, rowspan=10)
-    ax2  = plt.subplot2grid((75, 40), (0, 20)  , colspan=18, rowspan=10)
-    ax3  = plt.subplot2grid((75, 40), (15, 0)  , colspan=18, rowspan=10)
-    ax4  = plt.subplot2grid((75, 40), (15, 20) , colspan=18, rowspan=10)
-
-    get_average_spectogram_panel(accelerometer_events["tapping"]["all"]["onset"], time_vector, fs, "onset", ax=ax1,
-                                 ylabel='Frequency [Hz]',colorbar_visibility=False)
+    ax_right_g  = plt.subplot2grid((77, 66), (0, 36) , colspan=30, rowspan=4)
+    ax_right_bh = plt.subplot2grid((77, 66), (4, 36) , colspan=30, rowspan=4)
+    ax_right_bl = plt.subplot2grid((77, 66), (8, 36) , colspan=30, rowspan=4)
+    ax_right_a  = plt.subplot2grid((77, 66), (12, 36), colspan=30, rowspan=4)
+    ax_right_t  = plt.subplot2grid((77, 66), (16, 36), colspan=30, rowspan=4)
     
-    get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["all"]["onset"], time_vector, fs,"onset", ax=ax2, 
-                                 ylabel='',  colorbar_visibility=False)
-
-    get_average_spectogram_panel(accelerometer_events["tapping"]["all"]["offset"], time_vector, fs, "offset", ax=ax3,
-                                 ylabel='Frequency [Hz]', colorbar_visibility=False)
+    # LEFT HEMISPHERE CHANNELS
+    ax_left_g  = sns.heatmap(data=heatmap_l_data[heatmap_l_data.index >= 60], vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_left_g)
+    ax_left_g.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_left_g.get_ylim()
+    ax_left_g.set_yticks([y_min-4, y_max+2])
+    ax_left_g.set_yticklabels(['60', '90'])
     
-    get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["all"]["offset"], time_vector, fs, "offset", ax=ax4, 
-                                 ylabel='', colorbar_visibility=False)
-
-    ax1.set_title("Tapping"              , fontsize=LABEL_SIZE_title, weight="bold")
-    ax2.set_title("Involuntary Movements", fontsize=LABEL_SIZE_title, weight="bold")
-
-def plot_average_spectogram_for_dyskinesia_severity(accelerometer_events, time_vector, fs):
+    ax_left_bh = sns.heatmap(data=heatmap_l_data[(heatmap_l_data.index >= 20) & (heatmap_l_data.index <= 35)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_left_bh)
+    ax_left_bh.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_left_bh.get_ylim()
+    ax_left_bh.set_yticks([y_min-2, y_max+2])
+    ax_left_bh.set_yticklabels(['20', '35'])
     
-    plt  = get_figure_template()
-    ax1  = plt.subplot2grid((75, 40), (0, 0)   , colspan=15, rowspan=10)
-    ax2  = plt.subplot2grid((75, 40), (0, 20)  , colspan=15, rowspan=10)
-
-    # Tapping
-    get_average_spectogram_panel(accelerometer_events["tapping"]["LID_none"]["onset"], 
-                                 time_vector, fs, "onset", 
-                                 ax=ax1, ylabel='Frequency [Hz]', colorbar_visibility=False)
-
-    if(len(accelerometer_events["tapping"]["LID_mild"]["onset"])!=0):
-        ax3  = plt.subplot2grid((75, 40), (15, 0)  , colspan=15, rowspan=10)
-        ax3.set_title("Tapping [mild LID] ", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["tapping"]["LID_mild"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax3, ylabel='Frequency [Hz]', colorbar_visibility=False)
-
-    if(len(accelerometer_events["tapping"]["LID_moderate"]["onset"])!=0):
-        ax5  = plt.subplot2grid((75, 40), (30, 0)  , colspan=15, rowspan=10)
-        ax5.set_title("Tapping [moderate LID] ", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["tapping"]["LID_moderate"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax5, ylabel='Frequency [Hz]', colorbar_visibility=False)
-
-    if(len(accelerometer_events["tapping"]["LID_severe"]["onset"])!=0):
-        ax7  = plt.subplot2grid((75, 40), (45, 0)  , colspan=15, rowspan=10)
-        ax7.set_title("Tapping [severe LID] ", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["tapping"]["LID_severe"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax7, ylabel='Frequency [Hz]', colorbar_visibility=False)
-
-    if(len(accelerometer_events["tapping"]["LID_extreme"]["onset"])!=0):
-        ax9  = plt.subplot2grid((75, 40), (60, 0)  , colspan=15, rowspan=10)
-        ax9.set_title("Tapping [extreme LID] ", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["tapping"]["LID_extreme"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax9, ylabel='Frequency [Hz]', colorbar_visibility=False)
+    ax_left_bl = sns.heatmap(data=heatmap_l_data[(heatmap_l_data.index >= 12) & (heatmap_l_data.index <= 20)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_left_bl)
+    ax_left_bl.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_left_bl.get_ylim()
+    ax_left_bl.set_yticks([y_min-1.25, y_max+1])
+    ax_left_bl.set_yticklabels(['12', '20'])
     
-    # involuntary_movement
+    ax_left_a = sns.heatmap(data=heatmap_l_data[(heatmap_l_data.index >= 8) & (heatmap_l_data.index <= 12)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_left_a)
+    ax_left_a.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_left_a.get_ylim()
+    ax_left_a.set_yticks([y_min-0.5, y_max+0.4])
+    ax_left_a.set_yticklabels(['8', '12'])
     
-    get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["LID_none"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax2, ylabel='Frequency [Hz]', colorbar_visibility=False)
+    ax_left_t = sns.heatmap(data=heatmap_l_data[(heatmap_l_data.index >= 4) & (heatmap_l_data.index <= 8)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_left_t)
+    ax_left_t.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_left_t.get_ylim()
+    ax_left_t.set_yticks([y_min-0.5, y_max+0.4])
+    ax_left_t.set_yticklabels(['4', '8'])
+    ax_left_t.set_xticklabels(ax_left_t.get_xticklabels(), fontsize=utils_plotting.LABEL_SIZE, rotation=90)
     
-    if(len(accelerometer_events["involuntary_movement"]["LID_mild"]["onset"])!=0):
-        ax4  = plt.subplot2grid((75, 40), (15, 20) , colspan=15, rowspan=10)
-        ax4.set_title("Involuntary Movements [mild LID]", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["LID_mild"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax4, ylabel='Frequency [Hz]', colorbar_visibility=False)
-        
+    
+    # RIGHT HEMISPHERE CHANNELS
+    ax_right_g  = sns.heatmap(data=heatmap_r_data[heatmap_r_data.index >= 60], vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_right_g)
+    ax_right_g.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_right_g.get_ylim()
+    ax_right_g.set_yticks([y_min-4, y_max+2])
+    ax_right_g.set_yticklabels(['60', '90'])
+    
+    ax_right_bh = sns.heatmap(data=heatmap_r_data[(heatmap_r_data.index >= 20) & (heatmap_r_data.index <= 35)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_right_bh)
+    ax_right_bh.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_right_bh.get_ylim()
+    ax_right_bh.set_yticks([y_min-2, y_max+2])
+    ax_right_bh.set_yticklabels(['20', '35'])
+    
+    ax_right_bl = sns.heatmap(data=heatmap_r_data[(heatmap_r_data.index >= 12) & (heatmap_r_data.index <= 20)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_right_bl)
+    ax_right_bl.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_right_bl.get_ylim()
+    ax_right_bl.set_yticks([y_min-1.25, y_max+1])
+    ax_right_bl.set_yticklabels(['12', '20'])
+    
+    ax_right_a = sns.heatmap(data=heatmap_r_data[(heatmap_r_data.index >= 8) & (heatmap_r_data.index <= 12)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_right_a)
+    ax_right_a.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_right_a.get_ylim()
+    ax_right_a.set_yticks([y_min-0.5, y_max+0.4])
+    ax_right_a.set_yticklabels(['8', '12'])
+    
+    ax_right_t = sns.heatmap(data=heatmap_r_data[(heatmap_r_data.index >= 4) & (heatmap_r_data.index <= 8)], 
+                             vmin=0, vmax=1, cmap="Reds", cbar=False, ax=ax_right_t)
+    ax_right_t.set_ylabel("", fontsize=utils_plotting.LABEL_SIZE, rotation=0)
+    y_min, y_max = ax_right_t.get_ylim()
+    ax_right_t.set_yticks([y_min-0.5, y_max+0.4])
+    ax_right_t.set_yticklabels(['4', '8'])
+    ax_right_t.set_xticklabels(ax_right_t.get_xticklabels(), fontsize=utils_plotting.LABEL_SIZE, rotation=90)
+    
+    ax_left_g.set_title("left hemisphere", fontsize=utils_plotting.LABEL_SIZE)
+    ax_right_g.set_title("right hemisphere", fontsize=utils_plotting.LABEL_SIZE)
+    
+    utils_plotting.set_axis(ax_left_g)
+    utils_plotting.set_axis(ax_left_bh)
+    utils_plotting.set_axis(ax_left_bl)
+    utils_plotting.set_axis(ax_left_a)
+    utils_plotting.set_axis(ax_left_t)
+    utils_plotting.set_axis(ax_right_g)
+    utils_plotting.set_axis(ax_right_bh)
+    utils_plotting.set_axis(ax_right_bl)
+    utils_plotting.set_axis(ax_right_a)
+    utils_plotting.set_axis(ax_right_t)
 
-    if(len(accelerometer_events["involuntary_movement"]["LID_moderate"]["onset"])!=0):
-        ax6  = plt.subplot2grid((75, 40), (30, 20) , colspan=15, rowspan=10)
-        ax6.set_title("Involuntary Movements [moderate LID]", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["LID_moderate"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax6, ylabel='Frequency [Hz]', colorbar_visibility=False)
+    plt.savefig(figure_name + ".png", dpi=300)
+    plt.savefig(figure_name + ".svg", dpi=300)
 
-    if(len(accelerometer_events["involuntary_movement"]["LID_severe"]["onset"])!=0):
-        ax8  = plt.subplot2grid((75, 40), (45, 20) , colspan=15, rowspan=10)
-        ax8.set_title("Involuntary Movements [severe LID]", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["LID_severe"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax8, ylabel='Frequency [Hz]', colorbar_visibility=False)
 
-    if(len(accelerometer_events["involuntary_movement"]["LID_extreme"]["onset"])!=0):
-        ax10 = plt.subplot2grid((75, 40), (60, 20) , colspan=15, rowspan=10)
-        ax10.set_title("Involuntary Movements [extreme LID]", fontsize=LABEL_SIZE, weight="bold")
-        get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["LID_extreme"]["onset"], 
-                                     time_vector, fs, "onset", 
-                                     ax=ax10, ylabel='Frequency [Hz]', colorbar_visibility=False)
 
-    ax1.set_title("Tapping [no LID]"              , fontsize=LABEL_SIZE, weight="bold")
-    ax2.set_title("Involuntary Movements [no LID]", fontsize=LABEL_SIZE, weight="bold")
+    

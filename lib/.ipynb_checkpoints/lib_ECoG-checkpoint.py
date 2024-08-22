@@ -3,13 +3,11 @@ import pandas as pd
 import numpy as np
 import scikit_posthocs as sp
 import sys
+from scipy import signal
 
 # inserting the lib folder to the compiler
 sys.path.insert(0, './lib')
 sys.path.insert(0, './utils/')
-
-#import utils scripts
-import utils_misc, utils_psd
 
 from lib_data import DATA_IO
 
@@ -42,10 +40,19 @@ class ECoG:
         self.times            = self.__dat.times
 
         # rereferencing for channels 
-        self.bipolar_channels = ["2-1", "3-2", "4-3", "5-4", "6-5", "7-6", "8-7", "9-8", "10-9", "11-10", "12-11"]
+        self.__contacts       = ["01", "02", "03", "04", "05", "06"]
+        
+        if(SUB=="016"):
+            self.bipolar_channels = ["04-02", "05-04", "06-05"] #for patient 16
+        else:
+            self.bipolar_channels = ["02-01", "03-02", "04-03", "05-04", "06-05", "07-06", "08-07", "09-08", "10-09", "11-10", "12-11"]
 
         # load right LFP data
-        self.recordings       = {}
+        self.recordings                  = {}
+        self.recordings[self.hemisphere] = {}
+        self.__get_channel_recordings()
+
+    def __get_channel_recordings(self):
         
         for channel_pair in self.bipolar_channels:
             
@@ -55,7 +62,7 @@ class ECoG:
             channel_2_name = next((self.__dat.colnames[i] for i, element in enumerate(self.__dat.colnames) if channel_2 in element), None)
             
             try:
-                self.recordings[channel_pair] = self.__dat.data[:,self.__dat.colnames.index(channel_1_name)] - self.__dat.data[:,self.__dat.colnames.index(channel_2_name)]
+                self.recordings[self.hemisphere][channel_pair] = self.__dat.data[:,self.__dat.colnames.index(channel_1_name)] - self.__dat.data[:,self.__dat.colnames.index(channel_2_name)]
             except Exception as error:
                 print("... SUB - " + self.__SUB + " : " +  channel_pair + " channel was not found!")
         
@@ -74,47 +81,41 @@ class ECoG:
             event_indices: A list containing tupples (start_index, finish_index) of index information for events
         """
         
-        fs        = self.fs
-        alignment = "onset" # ECoG activity is only aligned to event onsets
+        fs     = self.fs
 
         # create empty dataframe to populate
-        events = pd.DataFrame(columns=["event_no", "event_category", "event_laterality", "event_start_time", "ECoG_hemisphere", "ECoG_channel", 
-                                       "pre_event_recording", "event_recording", "post_event_recording",  
-                                       "CDRS_face", "CDRS_neck", "CDRS_trunk", "CDRS_right_leg", "CDRS_left_leg",
-                                       "CDRS_right_hand", "CDRS_left_hand", "CDRS_total_right", "CDRS_total_left", "CDRS_total"])
+        events = pd.DataFrame(columns=["patient", "event_no", "event_category", "event_laterality", "event_start_time", "duration",
+                                       "ECoG_hemisphere", "ECoG_channel", "pre_event_recording", "event_recording", "post_event_recording",
+                                       "CDRS_right_hand", "CDRS_left_hand", "CDRS_total", 'dyskinesia_arm', 'dyskinesia_total'])
     
         for index, event in dataset.iterrows():
 
             row                     = {}
+            row["patient"]          = self.__SUB
+            row["event_no"]         = event['event_no']
             row["event_category"]   = event['event_category']
             row["event_laterality"] = event['laterality']
             row["event_start_time"] = event['event_start_time']
+            row["duration"]         = event['duration']
             row["CDRS_right_hand"]  = event['CDRS_right_hand']
             row["CDRS_left_hand"]   = event['CDRS_left_hand']
-            row["CDRS_total_right"] = event['CDRS_total_right']
-            row["CDRS_total_left"]  = event['CDRS_total_left']
-            row["event_no"]         = event['event_no']
-            row["CDRS_face"]        = event['CDRS_face']
-            row["CDRS_neck"]        = event['CDRS_neck']
-            row["CDRS_trunk"]       = event['CDRS_trunk']
-            row["CDRS_right_leg"]   = event['CDRS_right_leg']
-            row["CDRS_left_leg"]    = event['CDRS_left_leg']
-            row["CDRS_total_hands"] = event['CDRS_total_hands']
             row["CDRS_total"]       = event['CDRS_total']
+            row["dyskinesia_arm"]   = event['dyskinesia_arm']
+            row["dyskinesia_total"] = event['dyskinesia_total']
               
             for channel in self.bipolar_channels: 
       
                 # events aligned based on their onset
-                start_index_pre    = event['event_start_index'] - fs  # pre-event start index: 1 sec before event onset
-                finish_index_pre   = event['event_start_index']       # pre-event finish index: event onset
+                start_index_pre    = event['event_start_index'] - fs * 2  # pre-event start index: 2 sec before event onset
+                finish_index_pre   = event['event_start_index']           # pre-event finish index: event onset
 
-                start_index_event  = event['event_start_index']       # event start index
-                finish_index_event = event['event_finish_index']      # event finish index
+                start_index_event  = event['event_start_index']           # event start index
+                finish_index_event = event['event_finish_index']          # event finish index
 
-                start_index_post   = event['event_finish_index']      # post-event start index: event offset
-                finish_index_post  = event['event_finish_index'] + fs # post-event finish index: 1 sec after event offset
+                start_index_post   = event['event_finish_index']          # post-event start index: event offset
+                finish_index_post  = event['event_finish_index'] + fs * 2 # post-event finish index: 2 sec after event offset
 
-                # only check the channel where we have LFP recordings 
+                # only check the channel where we have ECoG recordings 
                 if(channel in self.recordings.keys()):
                         
                     recording_pre               = self.recordings[channel][start_index_pre:finish_index_pre]
@@ -136,110 +137,76 @@ class ECoG:
                     if(np.isnan(recording_event).any()==False):
                         events.loc[len(events)] = row  
         return events
-        
-    @staticmethod
-    def select_LFP_recordings(dataset, hemisphere="", channel="32", event_category="tapping", dyskinesia_severity="all"):
 
-        if(hemisphere!=""): # if particular hemisphere is selected
-            
-            if(hemisphere=="right"):
-                ipsilateral_hand    = "right"
-                ipsilateral_scale   = "CDRS_right_hand"
-                controlateral_hand  = "left"
-                controlateral_scale = "CDRS_left_hand"
-            else:
-                ipsilateral_hand    = "left"
-                ipsilateral_scale   = "CDRS_left_hand"
-                controlateral_hand  = "right"
-                controlateral_scale = "CDRS_right_hand"
-        
-            LFP_ipsilateral_events   = dataset[(dataset.LFP_hemisphere==hemisphere) & 
-                                               (dataset.LFP_channel==channel) & 
-                                               (dataset.event_laterality==ipsilateral_hand) &
-                                               (dataset.event_category==event_category)]
-        
-            LFP_controlateral_events = dataset[(dataset.LFP_hemisphere==hemisphere) & 
-                                               (dataset.LFP_channel==channel) & 
-                                               (dataset.event_laterality==controlateral_hand) &
-                                               (dataset.event_category==event_category)]
-            
-            # in case of particular dyskinesia severity is selected 
-            if(dyskinesia_severity!="all"):
-                LFP_ipsilateral_events   = LFP_ipsilateral_events[LFP_ipsilateral_events[ipsilateral_scale]==dyskinesia_severity]
-                LFP_controlateral_events = LFP_controlateral_events[LFP_controlateral_events[controlateral_scale]==dyskinesia_severity]
+    def get_baseline_recording(self, t_min=0, t_max=5):
 
-        else: # if a particular hemisphere is not selected
-            LFP_ipsilateral_events = dataset[(dataset.event_laterality == dataset.LFP_hemisphere) &
-                                             (dataset.LFP_channel==channel) &
-                                             (dataset.event_category==event_category)]
-
-            LFP_controlateral_events = dataset[(dataset.event_laterality != dataset.LFP_hemisphere) &
-                                               (dataset.LFP_channel==channel) &
-                                               (dataset.event_category==event_category)]
-
-            # in case of particular dyskinesia severity is selected 
-            if(dyskinesia_severity!="all"):
-                LFP_ipsilateral_events = LFP_ipsilateral_events[((LFP_ipsilateral_events.event_laterality == "right") 
-                                                                 & (LFP_ipsilateral_events.CDRS_right_hand == dyskinesia_severity)) | 
-                                                                ((LFP_ipsilateral_events.event_laterality == "left") 
-                                                                 & (LFP_ipsilateral_events.CDRS_left_hand == dyskinesia_severity))]
-                
-                LFP_controlateral_events = LFP_controlateral_events[((LFP_controlateral_events.event_laterality == "right") 
-                                                                     & (LFP_controlateral_events.CDRS_right_hand == dyskinesia_severity)) | 
-                                                                    ((LFP_controlateral_events.event_laterality == "left") 
-                                                                     & (LFP_controlateral_events.CDRS_left_hand == dyskinesia_severity))]
-            
-        #LFP_ipsilateral_events['recording']   = LFP_ipsilateral_events['recording'].apply(utils_misc.convert_to_array)
-        #LFP_controlateral_events['recording'] = LFP_controlateral_events['recording'].apply(utils_misc.convert_to_array)
-        
-        return LFP_ipsilateral_events, LFP_controlateral_events
-
-    @staticmethod
-    def extract_average_psd_for_LFP(dataset, segment, error_bar):
-
-        # create an empty array
-        psd_array = []
-
-        # pass through all the rows in the dataframe containing LFP recordings.
-        for index, row in dataset.iterrows():
-
-            # measure the normalized/relative PSD for give sampling frequency (constant)
-            if(segment=="pre_event"):
-                freq, psd = utils_psd.measure_normalized_psd(row.pre_event_recording, fs=2048) 
-            elif(segment=="event"):
-                freq, psd = utils_psd.measure_normalized_psd(row.event_recording, fs=2048)
-            elif(segment=="post_event"):
-                freq, psd = utils_psd.measure_normalized_psd(row.post_event_recording, fs=2048)
-                
-            psd_array.append(psd)
-
-        # measure the mean power spectrum for all selected events and multiply by 100 to represent the percentage.
-        mean_psd = np.mean(psd_array, axis=0) * 100 
-
-        # based on the selected error bar, find either the standard deviation or standard error around the average PSD for each frequency
-        if(error_bar=="sd"):
-            error       = np.std(psd_array, axis=0) * 100
-            error_label = "standard deviation"
-        elif(error_bar=="se"):
-            error       = 2 * np.std(psd_array, axis=0) / np.sqrt(len(psd_array)) * 100
-            error_label = "standard error"
-
-        return freq, mean_psd, error
-
-    @staticmethod
-    def measure_LFP_power_spectra_with_laterality(dataset, hemisphere, channel, event_category, segment, severity):
-
-        # get the ipsilateral events for the selected hemisphere for the given channel, event_category, and dyskinesia severity aspects.
-        LFP_ipsilateral, LFP_controlateral = LFP.select_LFP_recordings(dataset, hemisphere=hemisphere, channel=channel, 
-                                                                       event_category=event_category, dyskinesia_severity=severity)
-        if(len(LFP_ipsilateral)!=0):
-            freq_ipsilateral, mean_ipsilateral, error_ipsilateral = LFP.extract_average_psd_for_LFP(LFP_ipsilateral, segment, error_bar="se")
-        else:
-            freq_ipsilateral = []; mean_ipsilateral = []; error_ipsilateral = []
-            
-        if(len(LFP_controlateral)!=0):
-            freq_controlateral, mean_controlateral, error_controlateral = LFP.extract_average_psd_for_LFP(LFP_controlateral, segment, error_bar="se")
-        else:
-            freq_controlateral = []; mean_controlateral = []; error_controlateral = []
+        # create empty dictionary
+        baseline_recordings             = {}
+        baseline_recordings[self.__SUB] = {}
     
-        return freq_ipsilateral, mean_ipsilateral, error_ipsilateral, freq_controlateral, mean_controlateral, error_controlateral
+        # get baseline time array from t_min to t_max minutes
+        baseline_t      = (self.times/60>=t_min) & (self.times/60<=t_max)
+
+        # iterate between hemispheres
+        for hemisphere in ["right", "left"]:
+            
+            baseline_recordings[self.__SUB][hemisphere] = {}
+
+            # iterate between LFP channels of selected hemisphere
+            for channel in self.bipolar_channels:
+
+                try:
+                    # get baseline recording for the selected hemisphere and channel and add to dictionary
+                    baseline_recordings[self.__SUB][hemisphere][channel] = self.recordings[hemisphere][channel][baseline_t].astype(float)
+                except:
+                    print("... SUB - " + self.__SUB + " : " + hemisphere + "_" + channel + " channel was not found!")
+
+        return baseline_recordings
+
+    @staticmethod
+    def define_onset_aligned_recordings(dataset, fs, pad=False):
+
+        # if pre_event_recording contains nan values, it will change the onset position of the event. 
+        # So remove all the rows where pre_event_recording contains np.nan
+        dataset = dataset[~dataset['pre_event_recording'].apply(lambda x: any(pd.isna(i) for i in x))]
+    
+        event_recording_onset_aligned = []
+        
+        for index, row in dataset.iterrows():
+            
+            rec = []
+            rec.extend(row.pre_event_recording.copy())
+        
+            if(len(row.event_recording) < fs*2):
+                rec.extend(row.event_recording.copy())
+                if(pad==True):
+                    rec = np.pad(rec, (0, max(0, fs*4 - len(rec))), mode='constant', constant_values=np.nan)
+            else:
+                rec.extend(row.event_recording[0:fs*2].copy())
+        
+            event_recording_onset_aligned.append(rec)
+            
+        dataset["event_recording_onset_alingned"] = event_recording_onset_aligned
+    
+        return dataset
+        
+    @staticmethod
+    def get_patient_events(dataset, SUB, event_mode):
+    
+        dataset_patient       = dataset[dataset.patient == SUB]                                                        # select patient
+    
+        if(event_mode == "controlateral"): # oly controlateral events
+            dataset_patient       = dataset_patient[dataset_patient.event_laterality != dataset_patient.ECoG_hemisphere]    
+        elif(event_mode == "ipsilateral"): # oly ipsilateral events
+            dataset_patient       = dataset_patient[dataset_patient.event_laterality == dataset_patient.ECoG_hemisphere] 
+    
+        # if the laterality (ipsi vs contro) of event doesnt matter, do nothing
+        
+        dataset_patient       = dataset_patient[dataset_patient.event_start_time >= 5]                                 # tappings after 5 minutes
+        dataset_patient_noLID = dataset_patient[dataset_patient.dyskinesia_arm == "none"]                              # noLID events
+        dataset_patient_LID   = dataset_patient[dataset_patient.dyskinesia_arm != "none"]                              # events
+        
+        dataset_patient_noLID.reset_index(drop=True, inplace=True)
+        dataset_patient_LID.reset_index(drop=True, inplace=True)
+        
+        return dataset_patient, dataset_patient_noLID, dataset_patient_LID

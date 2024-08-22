@@ -101,3 +101,50 @@ class NON_PARAMETRIC_TEST:
                                 row["pvalue"]                       = res[group1][group2]
                                 test_results.loc[len(test_results)] = row
         return test_results
+
+class PARAMETRIC_TEST:
+
+    def t_test(dataset, group_variable, feature_set, subset_variable=""):
+        
+        if(subset_variable==""):
+        
+            test_results = pd.DataFrame(columns=["feature", "group1", "group2", "pvalue"])
+            
+            for feature in feature_set:
+                
+                res = sp.posthoc_ttest(dataset, group_col=group_variable, val_col=feature,  p_adjust='holm')
+                
+                for group1 in res.columns:
+                    for group2 in res.columns:
+                        
+                        if(group1!=group2):
+                            row                                 = {}
+                            row["feature"]                      = feature
+                            row["group1"]                       = group1
+                            row["group2"]                       = group2
+                            row["pvalue"]                       = res[group1][group2]
+                            test_results.loc[len(test_results)] = row
+        else:
+            
+            test_results = pd.DataFrame(columns=[subset_variable, "feature", "group1", "group2", "pvalue"])
+            
+            for subset in dataset[subset_variable].unique():
+                
+                dataset_subset = dataset[dataset[subset_variable]==subset]
+        
+                for feature in feature_set:
+                    
+                    res = sp.posthoc_ttest(dataset_subset, group_col=group_variable, val_col=feature,  p_adjust='holm')
+            
+                    for group1 in res.columns:
+                        for group2 in res.columns:
+                            
+                            if(group1!=group2):
+                                row                                 = {}
+                                row[subset_variable]                = subset
+                                row["feature"]                      = feature
+                                row["group1"]                       = group1
+                                row["group2"]                       = group2
+                                row["pvalue"]                       = res[group1][group2]
+                                test_results.loc[len(test_results)] = row
+        return test_results

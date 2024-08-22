@@ -96,86 +96,62 @@ def plot_accelerometer_events_for_event_category(dataset, event_category, figure
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
+def plot_accelerometer_events_for_dyskinesia_severity(dataset, event_category, dyskinesia_strategy, figure_name):
 
-def plot_accelerometer_events_by_dyskinesia(accelerometer_events, kinematics, colors, figure_name):
+    plt  = utils_plotting.get_figure_template()
+    ax1  = plt.subplot2grid((75, 40), (0, 0)  , colspan=19, rowspan=15)
+    ax2  = plt.subplot2grid((75, 40), (0, 21) , colspan=19, rowspan=15)
+
+    if(dyskinesia_strategy == "total"):
+        
+        for severity in dataset.dyskinesia_total.unique():
+            dataset_severity        = dataset[(dataset.event_category == event_category) & (dataset.dyskinesia_total == severity)]
+            dataset_severity_onset  = []
+            dataset_severity_offset = []
     
-    plt  = get_figure_template()
-    ax1  = plt.subplot2grid((75, 40), (0, 0)  , colspan=18, rowspan=15)
-    ax2  = plt.subplot2grid((75, 40), (0, 20) , colspan=18, rowspan=15)
-    ax3  = plt.subplot2grid((75, 40), (20, 0) , colspan=18, rowspan=15)
-    ax4  = plt.subplot2grid((75, 40), (20, 20), colspan=18, rowspan=15)
+            for index, row in dataset_severity.iterrows():
+                dataset_severity_onset.append(row["event_onset_aligned"])
+                dataset_severity_offset.append(row["event_offset_aligned"])
 
-    event_category = "tapping"
+            ax1  = plot_accelerometer_events(dataset_severity_onset , axis=ax1, color=utils_plotting.colors[event_category][severity])
+            ax2  = plot_accelerometer_events(dataset_severity_offset, axis=ax2, color=utils_plotting.colors[event_category][severity])
 
-    # onset aligned
-    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
-        plot_accelerometer_events(accelerometer_events[event_category][severity]["onset"], kinematics.fs, 
-                                  axis=ax1, color=colors[event_category][severity], padding_for="onset")
-
-    # offset aligned
-    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
-        plot_accelerometer_events(accelerometer_events[event_category][severity]["offset"], kinematics.fs, 
-                                  axis=ax3, color=colors[event_category][severity], padding_for="offset")
-
-    event_category = "involuntary_movement"
+    else:
+        
+        for severity in dataset.dyskinesia_arm.unique():
+            dataset_severity        = dataset[(dataset.event_category == event_category) & (dataset.dyskinesia_arm == severity)]
+            dataset_severity_onset  = []
+            dataset_severity_offset = []
     
-    # onset aligned
-    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
-        plot_accelerometer_events(accelerometer_events[event_category][severity]["onset"], kinematics.fs, 
-                                  axis=ax2, color=colors[event_category][severity], padding_for="onset")
+            for index, row in dataset_severity.iterrows():
+                dataset_severity_onset.append(row["event_onset_aligned"])
+                dataset_severity_offset.append(row["event_offset_aligned"])
 
-    # offset aligned
-    for severity in ["extreme", "severe", "moderate", "mild", "none"]:
-        plot_accelerometer_events(accelerometer_events[event_category][severity]["offset"], kinematics.fs, 
-                                  axis=ax4, color=colors[event_category][severity], padding_for="offset")
-    
-    
-    ax1.set_title("Tapping"              , fontsize=LABEL_SIZE_title, weight="bold")
-    ax2.set_title("Involuntary Movements", fontsize=LABEL_SIZE_title, weight="bold")
-    ax1.set_ylabel("Accelerometer"       , fontsize=LABEL_SIZE_title)
-    ax3.set_ylabel("Accelerometer"       , fontsize=LABEL_SIZE_title)
+            ax1  = plot_accelerometer_events(dataset_severity_onset , axis=ax1, color=utils_plotting.colors[event_category][severity])
+            ax2  = plot_accelerometer_events(dataset_severity_offset, axis=ax2, color=utils_plotting.colors[event_category][severity])
+
+        
+    utils_plotting.set_axis(ax1)
+    utils_plotting.set_axis(ax2)
+
+    ax1.set_title("Tapping [Onset Aligned]", fontsize=utils_plotting.LABEL_SIZE_label, weight="bold")
+    ax2.set_title("Tapping [Offset Aligned]", fontsize=utils_plotting.LABEL_SIZE_label, weight="bold")
     
     ax1.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
     ax2.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
-    ax3.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
-    ax4.axvline(x=0, ymin=-1, ymax=1, ls='--', color="grey")
-   
-    ax1.set_xlim([-1,3])
-    ax2.set_xlim([-1,3])
-    ax3.set_xlim([-3,1])
-    ax4.set_xlim([-3,1])
-    
-    # aling y axes
-    ax1.set_ylim([0, 1.5e-06])
-    ax2.set_ylim([0, 1.5e-06])
-    ax3.set_ylim([0, 1.5e-06])
-    ax4.set_ylim([0, 1.5e-06])
-    
-    set_axis(ax1)
-    set_axis(ax2)
-    set_axis(ax3)
-    set_axis(ax4)
+    ax1.set_xlim([-2,2])
+    ax2.set_xlim([-2,2])
+    ax1.set_ylim([0, 1e-06])
+    ax2.set_ylim([0, 1e-06])
 
-    # add legend
-    c_LID_none     = mpatches.Patch(color=colors["tapping"]["none"], label='LID none')
-    c_LID_mild     = mpatches.Patch(color=colors["tapping"]["mild"], label='LID mild')
-    c_LID_moderate = mpatches.Patch(color=colors["tapping"]["moderate"], label='LID moderate')
-    c_LID_severe   = mpatches.Patch(color=colors["tapping"]["severe"], label='LID severe')
-    c_LID_extreme  = mpatches.Patch(color=colors["tapping"]["extreme"], label='LID extreme')
-    ax3.legend(handles=[c_LID_none, c_LID_mild, c_LID_moderate, c_LID_severe, c_LID_extreme], 
-               prop={'size': LABEL_SIZE_title}, loc='lower center', bbox_to_anchor=(0.5,-1))
-
-    # add legend
-    c_LID_none     = mpatches.Patch(color=colors["involuntary_movement"]["none"], label='LID none')
-    c_LID_mild     = mpatches.Patch(color=colors["involuntary_movement"]["mild"], label='LID mild')
-    c_LID_moderate = mpatches.Patch(color=colors["involuntary_movement"]["moderate"], label='LID moderate')
-    c_LID_severe   = mpatches.Patch(color=colors["involuntary_movement"]["severe"], label='LID severe')
-    c_LID_extreme  = mpatches.Patch(color=colors["involuntary_movement"]["extreme"], label='LID extreme')
-    ax4.legend(handles=[c_LID_none, c_LID_mild, c_LID_moderate, c_LID_severe, c_LID_extreme], 
-               prop={'size': LABEL_SIZE_title}, loc='lower center', bbox_to_anchor=(0.5,-1))
-    
+    ax2.set_yticklabels("")
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
+
+
+##########################################################################################
+##########################################################################################
+##########################################################################################
 
 def plot_single_event_and_spectogram(event, time_vector, fs, alignment):
 
