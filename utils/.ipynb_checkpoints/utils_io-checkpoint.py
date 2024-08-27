@@ -86,11 +86,11 @@ def load_ECoG_events(event_category, fs):
     EVENTS_IPSILATERAL_LID     = EVENTS_IPSILATERAL[EVENTS_IPSILATERAL.dyskinesia_arm!="none"]
     
     event_dictionary["controlateral"]          = {}
-    event_dictionary["controlateral"]["noLID"] = EVENTS_CONTROLATERAL_noLID
-    event_dictionary["controlateral"]["LID"]   = EVENTS_CONTROLATERAL_LID
+    event_dictionary["controlateral"]["noLID"] = EVENTS_CONTROLATERAL_noLID[EVENTS_CONTROLATERAL_noLID.event_category==event_category]
+    event_dictionary["controlateral"]["LID"]   = EVENTS_CONTROLATERAL_LID[EVENTS_CONTROLATERAL_LID.event_category==event_category]
     event_dictionary["ipsilateral"]            = {}
-    event_dictionary["ipsilateral"]["noLID"]   = EVENTS_CONTROLATERAL_noLID
-    event_dictionary["ipsilateral"]["LID"]     = EVENTS_CONTROLATERAL_LID
+    event_dictionary["ipsilateral"]["noLID"]   = EVENTS_IPSILATERAL_noLID[EVENTS_IPSILATERAL_noLID.event_category==event_category]
+    event_dictionary["ipsilateral"]["LID"]     = EVENTS_IPSILATERAL_LID[EVENTS_IPSILATERAL_LID.event_category==event_category]
 
     return event_dictionary
 
