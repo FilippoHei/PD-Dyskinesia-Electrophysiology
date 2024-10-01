@@ -8,6 +8,7 @@ import sys
 import os
 from os import listdir
 import pickle
+import pyvista as pv 
 
 # inserting the lib folder to the compiler
 sys.path.insert(0, './lib')
@@ -25,15 +26,22 @@ def load_baseline_recordings(recording_type):
     SUB_LIST            = utils_misc.get_SUB_list(DATA_IO.path_data) # get the SUB id list which we have a recording of them
 
     for SUB in SUB_LIST:
+
         try:
             with open(DATA_IO.path_events + "baseline_recordings/" + recording_type + "/" + SUB + ".pkl", 'rb') as handle:
                 baseline_recordings[SUB] = {}
                 SUB_baseline             = pickle.load(handle)
-                
-                baseline_recordings[SUB]["right"] = list(SUB_baseline.values())[0]["right"]
-                baseline_recordings[SUB]["left"]  = list(SUB_baseline.values())[0]["left"]
         except:
-            print("Patient " + SUB + ": does not have baseline recordings")
+            pass
+        try:
+            baseline_recordings[SUB]["right"] = list(SUB_baseline.values())[0]["right"]
+        except:
+            print("Patient " + SUB + ": does not have right hemisphere baseline recordings")
+        try:
+            baseline_recordings[SUB]["left"]  = list(SUB_baseline.values())[0]["left"]
+        except:
+            print("Patient " + SUB + ": does not have left hemisphere baseline recordings")
+            
     return baseline_recordings
 
 
@@ -94,24 +102,63 @@ def load_ECoG_events(event_category, fs):
 
     return event_dictionary
 
-def load_ECoG_event_PSD(event_category):
+def load_ECoG_event_PSD(event_category, event_laterality):
     
-    event_dictionary                           = {}    
-    event_dictionary["controlateral"]          = {}
-    event_dictionary["controlateral"]["noLID"] = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/CONTROLATERAL_noLID.pkl")
-    event_dictionary["controlateral"]["LID"]   = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/CONTROLATERAL_LID.pkl")
-    event_dictionary["ipsilateral"]            = {}
-    event_dictionary["ipsilateral"]["noLID"]   = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/IPSILATERAL_noLID.pkl")
-    event_dictionary["ipsilateral"]["LID"]     = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/IPSILATERAL_LID.pkl")
+    event_dictionary = {} 
+    
+    if(event_laterality == "controlateral"):   
+        data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/CONTROLATERAL_noLID.pkl")
+        data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/CONTROLATERAL_LID.pkl")
+    else:
+        data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/IPSILATERAL_noLID.pkl")
+        data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/ECoG/IPSILATERAL_LID.pkl")
+        
+    event_dictionary["noLID_noDOPA"] = data_noLID[(data_noLID.event_start_time <= 30) & (data_noLID.event_category==event_category)]
+    event_dictionary["noLID_DOPA"]   = data_noLID[(data_noLID.event_start_time > 30) & (data_noLID.event_category==event_category)]
+    event_dictionary["mild"]         = data_LID[(data_LID.dyskinesia_arm=="mild") & (data_LID.event_category==event_category)]
+    event_dictionary["moderate"]     = data_LID[(data_LID.dyskinesia_arm=="moderate") & (data_LID.event_category==event_category)]
 
-    # select only particular event category
-    event_dictionary["controlateral"]["noLID"] = event_dictionary["controlateral"]["noLID"][event_dictionary["controlateral"]["noLID"].event_category==event_category]
-    event_dictionary["controlateral"]["LID"]   = event_dictionary["controlateral"]["LID"][event_dictionary["controlateral"]["LID"].event_category==event_category]
-    event_dictionary["ipsilateral"]["noLID"]   = event_dictionary["ipsilateral"]["noLID"][event_dictionary["ipsilateral"]["noLID"].event_category==event_category]
-    event_dictionary["ipsilateral"]["LID"]     = event_dictionary["ipsilateral"]["LID"][event_dictionary["ipsilateral"]["LID"].event_category==event_category] 
+    event_dictionary["noLID_noDOPA"].reset_index(inplace=True)
+    event_dictionary["noLID_DOPA"].reset_index(inplace=True)
+    event_dictionary["mild"].reset_index(inplace=True)
+    event_dictionary["moderate"].reset_index(inplace=True)
 
     return event_dictionary
 
+def load_LFP_event_PSD(event_category, event_laterality):
+    
+    event_dictionary = {} 
+    
+    if(event_laterality == "controlateral"):   
+        data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/LFP/CONTROLATERAL_MOTOR_noLID.pkl")
+        data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/LFP/CONTROLATERAL_MOTOR_LID.pkl")
+    else:
+        data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/LFP/IPSILATERAL_MOTOR_noLID.pkl")
+        data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/LFP/IPSILATERAL_MOTOR_LID.pkl")
+        
+    event_dictionary["noLID_noDOPA"] = data_noLID[(data_noLID.event_start_time <= 30) & (data_noLID.event_category==event_category)]
+    event_dictionary["noLID_DOPA"]   = data_noLID[(data_noLID.event_start_time > 30) & (data_noLID.event_category==event_category)]
+    event_dictionary["mild"]         = data_LID[(data_LID.dyskinesia_arm=="mild") & (data_LID.event_category==event_category)]
+    event_dictionary["moderate"]     = data_LID[(data_LID.dyskinesia_arm=="moderate") & (data_LID.event_category==event_category)]
+
+    event_dictionary["noLID_noDOPA"].reset_index(inplace=True)
+    event_dictionary["noLID_DOPA"].reset_index(inplace=True)
+    event_dictionary["mild"].reset_index(inplace=True)
+    event_dictionary["moderate"].reset_index(inplace=True)
+
+    return event_dictionary
+
+def load_cortical_atlas_meshes():
+    meshes                     = {} 
+    meshes["right_hemisphere"] = pv.read(DATA_IO.path_atlas_cortical + 'cortex_right.vtk')
+    meshes["left_hemisphere"]  = pv.read(DATA_IO.path_atlas_cortical + 'cortex_left.vtk')
+    return meshes
+
+def load_STN_meshes():
+    meshes                     = {} 
+    meshes["right_hemisphere"] = pv.read(DATA_IO.path_atlas_subthalamic + 'stn_right.vtk')
+    meshes["left_hemisphere"]  = pv.read(DATA_IO.path_atlas_subthalamic + 'stn_left.vtk')
+    return meshes
 
     
     

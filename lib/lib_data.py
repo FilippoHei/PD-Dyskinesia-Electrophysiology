@@ -8,10 +8,12 @@ from utils.utils_fileManagement import load_class_pickle, mergedData
 class DATA_IO:
 
     # definition of static fields
-    path_events           = "../events/"
-    path_coordinates      = "../coordinates/"
-    path_figure           = "../figures/"
-    path_data             = "../data/"
+    path_events            = "../events/"
+    path_coordinates       = "../coordinates/"
+    path_figure            = "../figures/"
+    path_data              = "../data/"
+    path_atlas_cortical    = "atlases/AAL3/"
+    path_atlas_subthalamic = "atlases/DISTAL Atlas (Medium)/3D Models/threshold_0.5/"
         
     def __init__(self, PATH, SUB, DAT_SOURCE):
         self.__PATH        = PATH
@@ -65,6 +67,8 @@ def load_baseline_recordings(recording_type, event_mode, region):
         except:
             print("Patient " + SUB + ": does not have controlateral events")
     return baseline_recordings
+
+
 
 
 

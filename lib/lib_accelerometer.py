@@ -5,8 +5,13 @@ import sys
 import json
 from utils.utils_fileManagement import load_class_pickle, mergedData
 
+sys.path.insert(0, './utils/')
+
+#import utils scripts
+import utils_filtering, utils_accelerometer
+
 from lib_data import DATA_IO
-import utils_accelerometer
+
 
 class ACCELEROMETER:
 
@@ -16,26 +21,37 @@ class ACCELEROMETER:
         print("... loading started")
 
         # use DATA_IO to load data structure
-        data_IO_r           = DATA_IO(PATH, SUB, 'acc_right')
-        data_IO_l           = DATA_IO(PATH, SUB, 'acc_left')
-        self.__dat_r        = data_IO_r.get_data()
-        self.__dat_l        = data_IO_l.get_data()
+        data_IO_r     = DATA_IO(PATH, SUB, 'acc_right')
+        data_IO_l     = DATA_IO(PATH, SUB, 'acc_left')
+        
+        self.SUB      = SUB
+        self.__dat_r  = data_IO_r.get_data()
+        self.__dat_l  = data_IO_l.get_data()
 
         # populate class fields
-        self.fs             = self.__dat_r.fs
-        self.times          = self.__dat_r.data[:,self.__dat_r.colnames.index('dopa_time')]
+        self.fs       = self.__dat_r.fs
+        self.times    = self.__dat_r.data[:,self.__dat_r.colnames.index('dopa_time')]
         
         # load right accelerometer data
-        self.__ACC_R_X = self.__dat_r.data[:,self.__dat_r.colnames.index('ACC_R_X')]
-        self.__ACC_R_Y = self.__dat_r.data[:,self.__dat_r.colnames.index('ACC_R_Y')]
-        self.__ACC_R_Z = self.__dat_r.data[:,self.__dat_r.colnames.index('ACC_R_Z')]
-        self.ACC_R     = np.sqrt(np.array(self.__ACC_R_X.tolist())**2 + np.array(self.__ACC_R_Y.tolist())**2 + np.array(self.__ACC_R_Z.tolist())**2)
+        self.ACC_R_X  = self.__dat_r.data[:,self.__dat_r.colnames.index('ACC_R_X')]
+        self.ACC_R_Y  = self.__dat_r.data[:,self.__dat_r.colnames.index('ACC_R_Y')]
+        self.ACC_R_Z  = self.__dat_r.data[:,self.__dat_r.colnames.index('ACC_R_Z')]
 
         # load left accelerometer data
-        self.__ACC_L_X = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_X')]
-        self.__ACC_L_Y = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Y')]
-        self.__ACC_L_Z = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Z')]
-        self.ACC_L     = np.sqrt(np.array(self.__ACC_L_X.tolist())**2 + np.array(self.__ACC_L_Y.tolist())**2 + np.array(self.__ACC_L_Z.tolist())**2)
+        self.ACC_L_X  = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_X')]
+        self.ACC_L_Y  = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Y')]
+        self.ACC_L_Z  = self.__dat_l.data[:,self.__dat_l.colnames.index('ACC_L_Z')]
+
+        if(SUB=="019"):
+            self.ACC_R_X  = utils_filtering.bandpass_filter(self.ACC_R_X.astype(float), fs=512, l_freq=1, h_freq=48).astype(float)
+            self.ACC_R_Y  = utils_filtering.bandpass_filter(self.ACC_R_Y.astype(float), fs=512, l_freq=1, h_freq=48).astype(float)
+            self.ACC_R_Z  = utils_filtering.bandpass_filter(self.ACC_R_Z.astype(float), fs=512, l_freq=1, h_freq=48).astype(float)
+            self.ACC_L_X  = utils_filtering.bandpass_filter(self.ACC_L_X.astype(float), fs=512, l_freq=1, h_freq=48).astype(float)
+            self.ACC_L_Y  = utils_filtering.bandpass_filter(self.ACC_L_Y.astype(float), fs=512, l_freq=1, h_freq=48).astype(float)
+            self.ACC_L_Z  = utils_filtering.bandpass_filter(self.ACC_L_Z.astype(float), fs=512, l_freq=1, h_freq=48).astype(float)
+
+        self.ACC_R    = np.sqrt(np.array(self.ACC_R_X.tolist())**2 + np.array(self.ACC_R_Y.tolist())**2 + np.array(self.ACC_R_Z.tolist())**2)
+        self.ACC_L    = np.sqrt(np.array(self.ACC_L_X.tolist())**2 + np.array(self.ACC_L_Y.tolist())**2 + np.array(self.ACC_L_Z.tolist())**2)
                                    
     def extract_accelerometer_events(self, dataset):
     

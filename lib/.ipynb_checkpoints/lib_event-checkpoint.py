@@ -39,7 +39,6 @@ class EVENTS:
         self.right_tap      = self.__dat.data[:,self.__dat.colnames.index('right_tap')]
         self.left_move      = self.__dat.data[:,self.__dat.colnames.index('left_move')]
         self.right_move     = self.__dat.data[:,self.__dat.colnames.index('right_move')]
-        self.bilateral_move = np.array([a & b for a, b in zip(self.left_move.astype(int).tolist(), self.right_move.astype(int).tolist())])
         self.no_move        = self.__dat.data[:,self.__dat.colnames.index('no_move')]
         self.period_rest    = (self.task == "rest").astype(int)
         self.period_free    = (self.task == "free").astype(int)
@@ -265,17 +264,14 @@ class EVENTS:
                 return scores[i]
 
     def __get_dyskinesia_label_arm_strategy(self, arm_score, total_score):
+        # old one
         if(total_score==0):
             return "none"
         else:
             if(arm_score==1):
                 return "mild"
-            elif(arm_score==2):
+            elif(arm_score>=2):
                 return "moderate"
-            elif(arm_score==3):
-                return "severe"
-            elif(arm_score==4):
-                return "extreme"
 
     def __get_dyskinesia_label_total_strategy(self, arm_score, total_score):
         if(total_score==0):
@@ -284,12 +280,10 @@ class EVENTS:
             if(arm_score>0):
                 if(total_score<=4):
                     return "mild"
-                elif((total_score>4) & (total_score<=8)) :
+                elif(total_score>4) :
                     return "moderate"
-                elif((total_score>8)):
-                    return "severe"
                
-    def get_event_dataframe(self):
+    def get_event_dataframe(self, tap_indices):
 
         """
         Description
@@ -307,10 +301,8 @@ class EVENTS:
             dataset: The more populated version of the given dataframe structure
         """
         # get start and finish indices of different event types in different hands
-        right_voluntary   = self.__get_event_indices(self.right_involuntary_movements)
-        left_voluntary    = self.__get_event_indices(self.left_voluntary_movements)
-        right_involuntary = self.__get_event_indices(self.left_involuntary_movements)
-        left_involuntary  = self.__get_event_indices(self.left_involuntary_movements)  
+        right_tap_indices = tap_indices["right"]
+        left_tap_indices  = tap_indices["left"]
         
         # create an empty event dataframe
         events = pd.DataFrame(columns=["patient", "laterality", "event_no", "event_category", "event_start_index", 
@@ -319,10 +311,8 @@ class EVENTS:
                                        "dyskinesia_arm", "dyskinesia_total"])   
 
         # populate the empty dataframe
-        self.__populate_dataframe(events, self.__SUB, "right" , right_voluntary   , "voluntary")
-        self.__populate_dataframe(events, self.__SUB, "left"  , left_voluntary    , "voluntary")
-        self.__populate_dataframe(events, self.__SUB, "right" , right_involuntary , "involuntary")
-        self.__populate_dataframe(events, self.__SUB, "left"  , left_involuntary  , "involuntary")							
+        self.__populate_dataframe(events, self.__SUB, "right", right_tap_indices, "tapping")
+        self.__populate_dataframe(events, self.__SUB, "left" , left_tap_indices , "tapping")					
 
         
         # for each index check the laterality and get the corresponding dyskinesia score on the event onset

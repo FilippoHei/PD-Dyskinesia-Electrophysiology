@@ -151,3 +151,34 @@ def get_CDRS_evaluation_intervals(EVENTS_HISTORY, body_part):
     intervals_score.append(scores[-1])
     
     return intervals_time, intervals_score
+
+def get_task_period_times_indices(task_array):
+    
+    # Initialize variables
+    tapping_periods        = {}
+    current_tapping_period = []
+    tapping_period_index   = 0
+    start_time_index       = None
+    
+    # Iterate through the binary array
+    for i, value in enumerate(task_array):
+        if (value == 1):
+            # If this is the start of a new tapping_period, record the start time
+            if(not current_tapping_period):
+                start_time_index = i
+            # Add the value to the current tapping_period
+            current_tapping_period.append(value)
+        elif(current_tapping_period):
+            # If the current tapping_period is not empty and we encounter a 0, save the current tapping_period
+            finish_time_index                     = i - 1  # The end time is the last 1's time
+            tapping_periods[tapping_period_index] = (start_time_index, finish_time_index)
+            current_tapping_period                = []
+            tapping_period_index                  += 1
+    
+    # Add the last tapping_period if the array ends with 1
+    if current_tapping_period:
+        finish_time_index                     = len(task_array)-1
+        tapping_periods[tapping_period_index] = (start_time_index, finish_time_index)
+    
+    tapping_periods_time_indices = list(tapping_periods.values())
+    return tapping_periods_time_indices

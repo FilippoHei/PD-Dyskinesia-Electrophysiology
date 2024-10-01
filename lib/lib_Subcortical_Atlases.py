@@ -241,6 +241,7 @@ class Distal_Atlas:
         hemisphere_code = "dx" if(hemisphere == "right") else "sx"
         return self.basal_ganglia[hemisphere_code][nucleus]
 
+    """
     def nuclei_in_out(self, nuclei, lead_coordinates):
     
         nuclei_position = []
@@ -250,19 +251,31 @@ class Distal_Atlas:
             # apply convex hull algorithm to define if given coordinate list resides within the nucleus or not
             hull     = ConvexHull(nuclei)
             new_hull = ConvexHull(np.concatenate((nuclei, [coordinate])))
-            nuclei_position.append(np.array_equal(new_hull.vertices, hull.vertices) == True)
+            nuclei_position.append(np.array_equal(new_hull.vertices, hull.vertices) == True)s.points
         
         return nuclei_position
+    """
+    
+    def nuclei_in_out(self, nucleus, lead_coordinates):
+    
+        # Convert PyVista PolyData to numpy array of points
+        point_cloud = nucleus
+        point = np.asarray(lead_coordinates)
+        hull = ConvexHull(point_cloud)
+        hull_delaunay = Delaunay(point_cloud)
+        is_inside = hull_delaunay.find_simplex(point) >= 0
+        
+        return is_inside
 
     def check_position_in_nucleus(self, nucleus, hemisphere, coordinates):
         
-        if(self.nuclei_in_out(nucleus[hemisphere]["motor"], coordinates)[0]==True):
+        if(self.nuclei_in_out(nucleus[hemisphere]["motor"], coordinates)==True):
             return "motor"
         
-        elif(self.nuclei_in_out(nucleus[hemisphere]["associative"], coordinates)[0]==True):
+        elif(self.nuclei_in_out(nucleus[hemisphere]["associative"], coordinates)==True):
             return "associative"
        
-        elif(self.nuclei_in_out(nucleus[hemisphere]["limbic"], coordinates)[0]==True):
+        elif(self.nuclei_in_out(nucleus[hemisphere]["limbic"], coordinates)==True):
             return "limbic"
         
         else:

@@ -52,13 +52,13 @@ def plot_adjusted_coherence(freq, coherence_mean, coherence_error, color, axis):
     
     
     # Set the custom ticks and labels
-    x_ticks = [4, 12, 20, 30, 60, 70, 80, 90]
+    x_ticks = [4, 12, 20, 35, 60, 70, 80, 90]
     axis.set_xticks([custom_transform(xt) for xt in x_ticks])
     axis.set_xticklabels(x_ticks)
     axis.set_ylim([-25, 50])
     axis.set_yticks([-25,0,25,50])
-    axis.set_ylim([-50, 75])
-    axis.set_yticks([-50,-25,0,25,50,75])
+    axis.set_ylim([-25, 75])
+    axis.set_yticks([-25,0,25,50,75])
     axis.set_xlim([custom_transform(4),custom_transform(90)])
     
     # Apply the custom transformation to the x-axis
@@ -77,7 +77,7 @@ def plot_coherence_panel(freq, coherence_array, error_type, color, axis):
     
     plot_adjusted_coherence(freq, coherence_mean=coherence_mean, coherence_error=coherence_error, color=color, axis=axis)
     utils_plotting.set_axis(axis)
-    axis.set_xticklabels([xt for xt in [4, 12, 20, 30, 60, 70, 80, 90]]) 
+    axis.set_xticklabels([xt for xt in [4, 12, 20, 35, 60, 70, 80, 90]]) 
         
     return axis
 
@@ -129,24 +129,15 @@ def plot_dyskinesia_severity_coherence(dataset_LID, dataset_noLID, segment="even
 
     # get the coherence array of selected event segment
     freq                  = np.linspace(4,100,97) # fixed
-
-    # plot
-    plt = utils_plotting.get_figure_template()
-    ax  = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
     
     try:
         plot_coherence_panel(freq, dataset_LID[dataset_LID.dyskinesia_arm == "mild"][coherence_feature].to_list(), 
-                             error_type=error_type, color=utils_plotting.colors["voluntary"]["mild"], axis=ax)
+                             error_type=error_type, color=utils_plotting.colors["tapping"]["mild"], axis=ax)
     except:
         pass
     try:
         plot_coherence_panel(freq, dataset_LID[dataset_LID.dyskinesia_arm == "moderate"][coherence_feature].to_list(), 
-                             error_type=error_type, color=utils_plotting.colors["voluntary"]["moderate"], axis=ax)
-    except:
-        pass
-    try:
-        plot_coherence_panel(freq, dataset_LID[dataset_LID.dyskinesia_arm == "severe"][coherence_feature].to_list(), 
-                             error_type=error_type, color=utils_plotting.colors["voluntary"]["severe"], axis=ax)
+                             error_type=error_type, color=utils_plotting.colors["tapping"]["moderate"], axis=ax)
     except:
         pass
 

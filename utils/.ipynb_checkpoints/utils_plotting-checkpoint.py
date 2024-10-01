@@ -19,25 +19,16 @@ LABEL_SIZE_title = 7
 # color dataframe
 colors                            = {}
 
-colors["tapping"]                 = "#d6573a"
-colors["rest"]                    = "#73a4a8"
-colors["free"]                    = "#646198"
+colors["task_tapping"]            = "#d6573a"
+colors["task_rest"]               = "#73a4a8"
+colors["task_free"]               = "#646198"
 
-colors["tapping_movement"]        = "#ef6351"
-
-
-colors["voluntary"]               = {}
-colors["voluntary"]["none"]       = "#09686B"
-colors["voluntary"]["mild"]       = "#EF8A06"
-colors["voluntary"]["moderate"]   = "#DC2F02"
-colors["voluntary"]["severe"]     = "#9D0208"
-colors["voluntary"]["extreme"]    = "#370617"
-
-colors["involuntary"]             = {}
-colors["involuntary"]["mild"]     = "#00AACC"
-colors["involuntary"]["moderate"] = "#006AA3"
-colors["involuntary"]["severe"]   = "#023579"
-colors["involuntary"]["extreme"]  = "#03045E"
+colors["tapping"]                 = {}
+colors["tapping"]["none"]         = "#93B93C"
+colors["tapping"]["mild"]         = "#EF8A06"
+colors["tapping"]["moderate"]     = "#DC2F02"
+colors["tapping"]["severe"]       = "#9D0208"
+colors["tapping"]["extreme"]      = "#370617"
 
 colors["no_LID"]                  = "#93B93C"
 colors["no_LID_no_DOPA"]          = "#386641"

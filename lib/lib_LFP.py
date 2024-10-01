@@ -1,6 +1,7 @@
 import pingouin as pg
 import pandas as pd
 import numpy as np
+import pickle
 import scikit_posthocs as sp
 import sys
 from scipy import signal
@@ -192,6 +193,12 @@ class LFP:
 
         return baseline_recordings
 
+    @staticmethod
+    def load_baseline_recording(SUB):
+        with open(DATA_IO.path_events + "baseline_recordings/LFP/"+ SUB +".pkl", 'rb') as handle:
+            baseline = pickle.load(handle)
+        return baseline
+        
     @staticmethod
     def get_patient_events(dataset, SUB, event_mode):
     

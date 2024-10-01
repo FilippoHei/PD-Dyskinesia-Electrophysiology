@@ -5,6 +5,7 @@ Power spectral utilisation functions
 import pandas as pd
 from scipy import signal
 import numpy as np
+import pickle
 import sys
 import pickle
 
@@ -253,16 +254,18 @@ def normalize_patient_ephysiology_event_psd_to_baseline(df_events, recording_typ
 
     for SUB in df_events.patient.unique():
 
-        # get the electrophysiological recordings of events of selected patient
+        print("Patient - " + SUB)
+        
         if(recording_type=="ECoG"):
-            REC_SUB                                 = ECoG(PATH, SUB)
-            patient_all, patient_noLID, patient_LID = REC_SUB.get_patient_events(df_events, SUB=SUB, event_mode=event_mode)
+            # get the electrophysiological recordings of events of the selected patient
+            patient_all, patient_noLID, patient_LID = ECoG.get_patient_events(df_events, SUB=SUB, event_mode=event_mode)
+            # get baseline electrophysiological recordings
+            patient_baseline  = ECoG.load_baseline_recording(SUB)  
         else:
-            REC_SUB                                 = LFP(PATH, SUB)
-            patient_all, patient_noLID, patient_LID = REC_SUB.get_patient_events(df_events, SUB=SUB, event_mode=event_mode)
-    
-        # get baseline electrophysiological recordings
-        patient_baseline  = REC_SUB.get_baseline_recording(t_min=0, t_max=5)  
+            # get the electrophysiological recordings of events of the selected patient
+            patient_all, patient_noLID, patient_LID = LFP.get_patient_events(df_events, SUB=SUB, event_mode=event_mode)
+            # get baseline electrophysiological recordings
+            patient_baseline  = LFP.load_baseline_recording(SUB)  
 
         try:
             freq, psd_LID  = extract_normalized_psd_of_events(SUB, patient_LID, patient_baseline, recording_type)
@@ -405,15 +408,21 @@ def extract_spectral_features_for_event_segment(segment_psd, segment_name):
 
 def extract_PSD_features_for_events(dataset):
     # create new features for the dataframe
-    for feature in ['event_theta_peak', 'event_theta_peak_frequency', 'event_theta_mean', 
+    for feature in ['pre_event_theta_peak', 'pre_event_theta_peak_frequency', 'pre_event_theta_mean', 
+                    'pre_event_alpha_peak', 'pre_event_alpha_peak_frequency', 'pre_event_alpha_mean', 
+                    'pre_event_beta_low_peak', 'pre_event_beta_low_peak_frequency', 'pre_event_beta_low_mean', 
+                    'pre_event_beta_high_peak', 'pre_event_beta_high_peak_frequency', 'pre_event_beta_high_mean', 
+                    'pre_event_gamma_peak', 'pre_event_gamma_peak_frequency', 'pre_event_gamma_mean'
+                    'event_theta_peak', 'event_theta_peak_frequency', 'event_theta_mean', 
                     'event_alpha_peak', 'event_alpha_peak_frequency', 'event_alpha_mean', 
                     'event_beta_low_peak', 'event_beta_low_peak_frequency', 'event_beta_low_mean', 
                     'event_beta_high_peak', 'event_beta_high_peak_frequency', 'event_beta_high_mean', 
-                    'event_gamma_peak', 'event_gamma_peak_frequency', 'event_gamma_mean', 
-                    'gamma_peak_onset_ratio', 'gamma_peak_offset_ratio', 'gamma_baseline_onset_ratio', 'gamma_baseline_offset_ratio', 
-                    'beta_low_peak_onset_ratio', 'beta_low_peak_offset_ratio', 'beta_low_baseline_onset_ratio', 'beta_low_baseline_offset_ratio', 
-                    'beta_high_peak_onset_ratio', 'beta_high_peak_offset_ratio', 'beta_high_baseline_onset_ratio', 'beta_high_baseline_offset_ratio', 
-                    'alpha_baseline_onset_ratio', 'alpha_baseline_offset_ratio', 'theta_baseline_onset_ratio', 'theta_baseline_offset_ratio']:
+                    'event_gamma_peak', 'event_gamma_peak_frequency', 'event_gamma_mean',
+                    'post_event_theta_peak', 'post_event_theta_peak_frequency', 'post_event_theta_mean', 
+                    'post_event_alpha_peak', 'post_event_alpha_peak_frequency', 'post_event_alpha_mean', 
+                    'post_event_beta_low_peak', 'post_event_beta_low_peak_frequency', 'post_event_beta_low_mean', 
+                    'post_event_beta_high_peak', 'post_event_beta_high_peak_frequency', 'post_event_beta_high_mean', 
+                    'post_event_gamma_peak', 'post_event_gamma_peak_frequency', 'post_event_gamma_mean']:
         dataset[feature] = np.nan
     
     # add new features to the dataframe
@@ -427,7 +436,23 @@ def extract_PSD_features_for_events(dataset):
         features.update(pre_event_LFP_features)
         features.update(event_LFP_features)
         features.update(post_event_LFP_features)
-    
+
+        dataset.at[index, 'pre_event_theta_peak']               = pre_event_LFP_features['pre_event_theta_peak']
+        dataset.at[index, 'pre_event_theta_peak_frequency']     = pre_event_LFP_features['pre_event_theta_peak_frequency']
+        dataset.at[index, 'pre_event_theta_mean']               = pre_event_LFP_features['pre_event_theta_mean']
+        dataset.at[index, 'pre_event_alpha_peak']               = pre_event_LFP_features['pre_event_alpha_peak']
+        dataset.at[index, 'pre_event_alpha_peak_frequency']     = pre_event_LFP_features['pre_event_alpha_peak_frequency']
+        dataset.at[index, 'pre_event_alpha_mean']               = pre_event_LFP_features['pre_event_alpha_mean']
+        dataset.at[index, 'pre_event_beta_low_peak']            = pre_event_LFP_features['pre_event_beta_low_peak']
+        dataset.at[index, 'pre_event_beta_low_peak_frequency']  = pre_event_LFP_features['pre_event_beta_low_peak_frequency']
+        dataset.at[index, 'pre_event_beta_low_mean']            = pre_event_LFP_features['pre_event_beta_low_mean']
+        dataset.at[index, 'pre_event_beta_high_peak']           = pre_event_LFP_features['pre_event_beta_high_peak']
+        dataset.at[index, 'pre_event_beta_high_peak_frequency'] = pre_event_LFP_features['pre_event_beta_high_peak_frequency']
+        dataset.at[index, 'pre_event_beta_high_mean']           = pre_event_LFP_features['pre_event_beta_high_mean']
+        dataset.at[index, 'pre_event_gamma_peak']               = pre_event_LFP_features['pre_event_gamma_peak']
+        dataset.at[index, 'pre_event_gamma_peak_frequency']     = pre_event_LFP_features['pre_event_gamma_peak_frequency']
+        dataset.at[index, 'pre_event_gamma_mean']               = pre_event_LFP_features['pre_event_gamma_mean']
+        
         dataset.at[index, 'event_theta_peak']               = event_LFP_features['event_theta_peak']
         dataset.at[index, 'event_theta_peak_frequency']     = event_LFP_features['event_theta_peak_frequency']
         dataset.at[index, 'event_theta_mean']               = event_LFP_features['event_theta_mean']
@@ -443,23 +468,21 @@ def extract_PSD_features_for_events(dataset):
         dataset.at[index, 'event_gamma_peak']               = event_LFP_features['event_gamma_peak']
         dataset.at[index, 'event_gamma_peak_frequency']     = event_LFP_features['event_gamma_peak_frequency']
         dataset.at[index, 'event_gamma_mean']               = event_LFP_features['event_gamma_mean']
-        
-        
-        dataset.at[index, "gamma_peak_onset_ratio"]         = (features['pre_event_gamma_peak'] - features['event_gamma_peak']) / features['event_gamma_peak'] * 100
-        dataset.at[index, "gamma_peak_offset_ratio"]        = (features['post_event_gamma_peak'] - features['event_gamma_peak']) / features['event_gamma_peak'] * 100
-        dataset.at[index, "gamma_baseline_onset_ratio"]     = (features['pre_event_gamma_mean'] - features['event_gamma_mean']) / features['event_gamma_mean'] * 100
-        dataset.at[index, "gamma_baseline_offset_ratio"]    = (features['post_event_gamma_mean'] - features['event_gamma_mean']) / features['event_gamma_mean'] * 100
-        dataset.at[index, "beta_high_peak_onset_ratio"]       = (features['pre_event_beta_high_peak'] - features['event_beta_high_peak']) / features['event_beta_high_peak'] * 100
-        dataset.at[index, "beta_high_peak_offset_ratio"]      = (features['post_event_beta_high_peak'] - features['event_beta_high_peak']) / features['event_beta_high_peak'] * 100
-        dataset.at[index, "beta_high_baseline_onset_ratio"]   = (features['pre_event_beta_high_mean'] - features['event_beta_high_mean']) / features['event_beta_high_mean'] * 100
-        dataset.at[index, "beta_high_baseline_offset_ratio"]  = (features['post_event_beta_high_mean'] - features['event_beta_high_mean']) / features['event_beta_high_mean'] * 100
-        dataset.at[index, "beta_low_peak_onset_ratio"]        = (features['pre_event_beta_low_peak'] - features['event_beta_low_peak']) / features['event_beta_low_peak'] * 100
-        dataset.at[index, "beta_low_peak_offset_ratio"]       = (features['post_event_beta_low_peak'] - features['event_beta_low_peak']) / features['event_beta_low_peak'] * 100
-        dataset.at[index, "beta_low_baseline_onset_ratio"]    = (features['pre_event_beta_low_mean'] - features['event_beta_low_mean']) / features['event_beta_low_mean'] * 100
-        dataset.at[index, "beta_low_baseline_offset_ratio"]   = (features['post_event_beta_low_mean'] - features['event_beta_low_mean']) / features['event_beta_low_mean'] * 100
-        dataset.at[index, "alpha_baseline_onset_ratio"]       = (features['pre_event_alpha_mean'] - features['event_alpha_mean']) / features['event_alpha_mean'] * 100
-        dataset.at[index, "alpha_baseline_offset_ratio"]      = (features['post_event_alpha_mean'] - features['event_alpha_mean']) / features['event_alpha_mean'] * 100
-        dataset.at[index, "theta_baseline_onset_ratio"]       = (features['pre_event_theta_mean'] - features['event_theta_mean']) / features['event_theta_mean'] * 100
-        dataset.at[index, "theta_baseline_offset_ratio"]      = (features['post_event_theta_mean'] - features['event_theta_mean']) / features['event_theta_mean'] * 100
+
+        dataset.at[index, 'post_event_theta_peak']               = post_event_LFP_features['post_event_theta_peak']
+        dataset.at[index, 'post_event_theta_peak_frequency']     = post_event_LFP_features['post_event_theta_peak_frequency']
+        dataset.at[index, 'post_event_theta_mean']               = post_event_LFP_features['post_event_theta_mean']
+        dataset.at[index, 'post_event_alpha_peak']               = post_event_LFP_features['post_event_alpha_peak']
+        dataset.at[index, 'post_event_alpha_peak_frequency']     = post_event_LFP_features['post_event_alpha_peak_frequency']
+        dataset.at[index, 'post_event_alpha_mean']               = post_event_LFP_features['post_event_alpha_mean']
+        dataset.at[index, 'post_event_beta_low_peak']            = post_event_LFP_features['post_event_beta_low_peak']
+        dataset.at[index, 'post_event_beta_low_peak_frequency']  = post_event_LFP_features['post_event_beta_low_peak_frequency']
+        dataset.at[index, 'post_event_beta_low_mean']            = post_event_LFP_features['post_event_beta_low_mean']
+        dataset.at[index, 'post_event_beta_high_peak']           = post_event_LFP_features['post_event_beta_high_peak']
+        dataset.at[index, 'post_event_beta_high_peak_frequency'] = post_event_LFP_features['post_event_beta_high_peak_frequency']
+        dataset.at[index, 'post_event_beta_high_mean']           = post_event_LFP_features['post_event_beta_high_mean']
+        dataset.at[index, 'post_event_gamma_peak']               = post_event_LFP_features['post_event_gamma_peak']
+        dataset.at[index, 'post_event_gamma_peak_frequency']     = post_event_LFP_features['post_event_gamma_peak_frequency']
+        dataset.at[index, 'post_event_gamma_mean']               = post_event_LFP_features['post_event_gamma_mean']
 
     return dataset

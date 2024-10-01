@@ -18,8 +18,7 @@ sys.path.insert(0, './utils/')
 import utils_plotting, utils_accelerometer
 
 from lib_data import DATA_IO
-
-
+    
 def plot_accelerometer_events(data, color, axis, error_bar= "se"):
 
     if(len(data)!=0):
@@ -152,75 +151,6 @@ def plot_accelerometer_events_for_dyskinesia_severity(dataset, event_category, d
 ##########################################################################################
 ##########################################################################################
 ##########################################################################################
-
-def plot_single_event_and_spectogram(event, time_vector, fs, alignment):
-
-    event = np.array(event)
-    
-    plt  = get_figure_template()
-    ax1  = plt.subplot2grid((75, 40), (0, 0) , colspan=18, rowspan=10)
-    ax2  = plt.subplot2grid((75, 40), (11, 0) , colspan=18, rowspan=15)
-
-    # plot event
-    ax1.plot(time_vector, event)
-    ax1.set_yticklabels([])
-    ax1.set_xticklabels([])
-
-    # plot spectogram
-    f, t, Sxx = spectrogram(event, fs=fs, nperseg=int(fs/10))
-    Sxx       = 10 * np.log10(Sxx) # 'Power/Frequency (dB/Hz)'
-
-    if(alignment=="onset"):
-        time_vec_spectogram = t - 1
-        cax = ax2.pcolormesh(time_vec_spectogram, f, Sxx, shading='gouraud')
-        ax1.set_xlim([-1,(len(event)/fs)-1])
-        ax2.set_xlim([-1,(len(event)/fs)-1])
-    else:
-        time_vec_spectogram = (t - max(t)) + 1
-        cax = ax2.pcolormesh(time_vec_spectogram, f, Sxx, shading='gouraud')
-        ax1.set_xlim([1-(len(event)/fs),1])
-        ax2.set_xlim([1-(len(event)/fs),1])
-        
-    ax1.axvline(x=0, ymin=-1, ymax=1, ls='-', color="dimgrey")
-    ax2.axvline(x=0, ymin=-1, ymax=1, ls='-', color="white")
-    ax1.text(-0.1, ax1.get_ylim()[1]*1.1, 'offset', c="k", fontsize = LABEL_SIZE)
-    
-    # Add the colorbar to the new axis
-    divider = make_axes_locatable(ax2)
-    cbar_ax = divider.append_axes("bottom", size="5%", pad=0.5)
-    cbar = plt.colorbar(cax, cax=cbar_ax, orientation='horizontal')
-    cbar.set_label('Power/Frequency (dB/Hz)', fontsize=LABEL_SIZE)
-    cbar.ax.tick_params(labelsize=LABEL_SIZE)
-
-    ax2.set_ylabel('Frequency [Hz]')
-    ax2.set_xlabel('Time [s]')
-    set_axis(ax1)
-    set_axis(ax2)
-    ax2.set_ylim([0,100])
-
-def plot_average_spectogram_for_event_category(accelerometer_events, time_vector, fs):
-    
-    plt  = get_figure_template()
-
-    ax1  = plt.subplot2grid((75, 40), (0, 0)   , colspan=18, rowspan=10)
-    ax2  = plt.subplot2grid((75, 40), (0, 20)  , colspan=18, rowspan=10)
-    ax3  = plt.subplot2grid((75, 40), (15, 0)  , colspan=18, rowspan=10)
-    ax4  = plt.subplot2grid((75, 40), (15, 20) , colspan=18, rowspan=10)
-
-    get_average_spectogram_panel(accelerometer_events["tapping"]["all"]["onset"], time_vector, fs, "onset", ax=ax1,
-                                 ylabel='Frequency [Hz]',colorbar_visibility=False)
-    
-    get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["all"]["onset"], time_vector, fs, "onset", ax=ax2, 
-                                 ylabel='',colorbar_visibility=False)
-
-    get_average_spectogram_panel(accelerometer_events["tapping"]["all"]["offset"], time_vector, fs, "offset", ax=ax3, 
-                                 ylabel='Frequency [Hz]', colorbar_visibility=False)
-    
-    get_average_spectogram_panel(accelerometer_events["involuntary_movement"]["all"]["offset"],time_vector, fs, "offset", ax=ax4, 
-                                 ylabel='', colorbar_visibility=False)
-
-    ax1.set_title("Tapping"              , fontsize=LABEL_SIZE_title, weight="bold")
-    ax2.set_title("Involuntary Movements", fontsize=LABEL_SIZE_title, weight="bold")
 
 def plot_CDRS_evolution_panel(CDRS_time, CDRS_score, CDRS_type, ax):
     

@@ -43,9 +43,17 @@ def extract_baseline_coherence_between_ECOG_LFP_channels():
         
         for h_ECOG in ["right", "left"]:
             for h_LFP in ["right", "left"]:
-            
-                channels_ECOG = BASELINE_ECOG[patient][h_ECOG].keys()
-                channels_LFP  = BASELINE_LFP[patient][h_LFP].keys()
+
+                try:
+                    channels_ECOG = BASELINE_ECOG[patient][h_ECOG].keys()
+                except:
+                    channels_ECOG = []
+
+                try:
+                    channels_LFP  = BASELINE_LFP[patient][h_LFP].keys()
+                except:
+                    channels_LFP  = []
+   
                 
                 for c_ECOG in channels_ECOG:
                     for c_LFP in channels_LFP:

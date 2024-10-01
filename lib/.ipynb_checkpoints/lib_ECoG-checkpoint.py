@@ -2,6 +2,7 @@ import pingouin as pg
 import pandas as pd
 import numpy as np
 import scikit_posthocs as sp
+import pickle
 import sys
 from scipy import signal
 
@@ -116,11 +117,11 @@ class ECoG:
                 finish_index_post  = event['event_finish_index'] + fs * 2 # post-event finish index: 2 sec after event offset
 
                 # only check the channel where we have ECoG recordings 
-                if(channel in self.recordings.keys()):
+                if(channel in self.recordings[self.hemisphere].keys()):
                         
-                    recording_pre               = self.recordings[channel][start_index_pre:finish_index_pre]
-                    recording_event             = self.recordings[channel][start_index_event:finish_index_event]
-                    recording_post              = self.recordings[channel][start_index_post:finish_index_post]
+                    recording_pre               = self.recordings[self.hemisphere][channel][start_index_pre:finish_index_pre]
+                    recording_event             = self.recordings[self.hemisphere][channel][start_index_event:finish_index_event]
+                    recording_post              = self.recordings[self.hemisphere][channel][start_index_post:finish_index_post]
 
                     row["ECoG_hemisphere"]      = self.hemisphere
                     row["ECoG_channel"]         = channel
@@ -133,7 +134,7 @@ class ECoG:
                     recording_event = np.array(recording_event, dtype=float)
                     recording_post  = np.array(recording_post, dtype=float)
                         
-                    # if LFP event recording does not contain any np.nan value, then add to the dataframe
+                    # if ECoG event recording does not contain any np.nan value, then add to the dataframe
                     if(np.isnan(recording_event).any()==False):
                         events.loc[len(events)] = row  
         return events
@@ -146,23 +147,25 @@ class ECoG:
     
         # get baseline time array from t_min to t_max minutes
         baseline_t      = (self.times/60>=t_min) & (self.times/60<=t_max)
+        baseline_recordings[self.__SUB][self.hemisphere] = {}
 
-        # iterate between hemispheres
-        for hemisphere in ["right", "left"]:
-            
-            baseline_recordings[self.__SUB][hemisphere] = {}
+        # iterate between LFP channels of selected hemisphere
+        for channel in self.bipolar_channels:
 
-            # iterate between LFP channels of selected hemisphere
-            for channel in self.bipolar_channels:
-
-                try:
-                    # get baseline recording for the selected hemisphere and channel and add to dictionary
-                    baseline_recordings[self.__SUB][hemisphere][channel] = self.recordings[hemisphere][channel][baseline_t].astype(float)
-                except:
-                    print("... SUB - " + self.__SUB + " : " + hemisphere + "_" + channel + " channel was not found!")
+            try:
+                # get baseline recording for the selected hemisphere and channel and add to dictionary
+                baseline_recordings[self.__SUB][self.hemisphere][channel] = self.recordings[self.hemisphere][channel][baseline_t].astype(float)
+            except:
+                print("... SUB - " + self.__SUB + " : " + self.hemisphere + "_" + channel + " channel was not found!")
 
         return baseline_recordings
 
+    @staticmethod
+    def load_baseline_recording(SUB):
+        with open(DATA_IO.path_events + "baseline_recordings/ECoG/"+ SUB +".pkl", 'rb') as handle:
+            baseline = pickle.load(handle)
+        return baseline
+        
     @staticmethod
     def define_onset_aligned_recordings(dataset, fs, pad=False):
 
@@ -195,9 +198,9 @@ class ECoG:
     
         dataset_patient       = dataset[dataset.patient == SUB]                                                        # select patient
     
-        if(event_mode == "controlateral"): # oly controlateral events
+        if(event_mode == "controlateral"): # only controlateral events
             dataset_patient       = dataset_patient[dataset_patient.event_laterality != dataset_patient.ECoG_hemisphere]    
-        elif(event_mode == "ipsilateral"): # oly ipsilateral events
+        elif(event_mode == "ipsilateral"): # only ipsilateral events
             dataset_patient       = dataset_patient[dataset_patient.event_laterality == dataset_patient.ECoG_hemisphere] 
     
         # if the laterality (ipsi vs contro) of event doesnt matter, do nothing

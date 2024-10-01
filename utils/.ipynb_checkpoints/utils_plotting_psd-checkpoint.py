@@ -74,12 +74,15 @@ def plot_power_spectra_panel(freq, psd_array, error_type, color, axis):
         plot_adjusted_psd(freq, psd_mean=psd_mean, psd_error=psd_error, color=color, axis=axis)
         utils_plotting.set_axis(axis)
         axis.set_ylim([-50,100])
+        axis.set_yticks([-50, -25, 0, 25, 50, 75, 100])
+        axis.set_ylim([-50,150])
+        axis.set_yticks([-50, -25, 0, 25, 50, 75, 100, 125,150])
         #######################################################################################
         #######################################################################################
         axis.set_xlim([-4,custom_transform(90)])
         #######################################################################################
         #######################################################################################
-        axis.set_xticklabels([xt for xt in [4, 12, 20, 30, 60, 70, 80, 90]]) 
+        axis.set_xticklabels([xt for xt in [4, 12, 20, 35, 60, 70, 80, 90]]) 
         
     return axis
 
@@ -119,7 +122,7 @@ def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, segment="event", error_typ
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
-def plot_LID_severity_psd(dataset_LID, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
+def plot_LID_severity_psd(dataset_LID, dataset_noLID, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
 
     if(segment=="event"):
         psd_segment = "event_psd"
@@ -129,28 +132,34 @@ def plot_LID_severity_psd(dataset_LID, segment="event", dyskinesia_strategy="dys
         psd_segment = "post_event_psd"
 
     # get the PSD array of selected event segment
+    psd_noLID_noDOPA = dataset_noLID[dataset_noLID.event_start_time<30][psd_segment].to_list()
+    psd_noLID_DOPA   = dataset_noLID[dataset_noLID.event_start_time>=30][psd_segment].to_list()
     psd_LID_mild     = dataset_LID[dataset_LID[dyskinesia_strategy]=="mild"][psd_segment].to_list()
     psd_LID_moderate = dataset_LID[dataset_LID[dyskinesia_strategy]=="moderate"][psd_segment].to_list()
-    psd_LID_severe   = dataset_LID[dataset_LID[dyskinesia_strategy]=="severe"][psd_segment].to_list()
     
-    freq            = np.linspace(4,100,97) # fixed
+    freq             = np.linspace(4,100,97) # fixed
 
     # plot
-    plt             = utils_plotting.get_figure_template()
-    ax              = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
+    plt              = utils_plotting.get_figure_template()
+    ax               = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
 
     try:
-        plot_power_spectra_panel(freq, psd_LID_mild, error_type=error_type, color=utils_plotting.colors["voluntary"]["mild"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_noDOPA, error_type=error_type, color=utils_plotting.colors["no_LID_no_DOPA"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_LID_moderate, error_type=error_type, color=utils_plotting.colors["voluntary"]["moderate"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_DOPA, error_type=error_type, color=utils_plotting.colors["no_LID_DOPA"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_LID_severe, error_type=error_type, color=utils_plotting.colors["voluntary"]["severe"], axis=ax)
+        plot_power_spectra_panel(freq, psd_LID_mild, error_type=error_type, color=utils_plotting.colors["tapping"]["mild"], axis=ax)
     except:
         pass
+    try:
+        plot_power_spectra_panel(freq, psd_LID_moderate, error_type=error_type, color=utils_plotting.colors["tapping"]["moderate"], axis=ax)
+    except:
+        pass
+        
     ax.set_title(segment, fontsize=utils_plotting.LABEL_SIZE_label)
 
     save_path = os.path.dirname(figure_name + ".png")
