@@ -122,7 +122,7 @@ def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, segment="event", error_typ
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
-def plot_LID_severity_psd(dataset_LID, dataset_noLID, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
+def plot_LID_severity_psd(dataset, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
 
     if(segment=="event"):
         psd_segment = "event_psd"
@@ -132,10 +132,10 @@ def plot_LID_severity_psd(dataset_LID, dataset_noLID, segment="event", dyskinesi
         psd_segment = "post_event_psd"
 
     # get the PSD array of selected event segment
-    psd_noLID_noDOPA = dataset_noLID[dataset_noLID.event_start_time<30][psd_segment].to_list()
-    psd_noLID_DOPA   = dataset_noLID[dataset_noLID.event_start_time>=30][psd_segment].to_list()
-    psd_LID_mild     = dataset_LID[dataset_LID[dyskinesia_strategy]=="mild"][psd_segment].to_list()
-    psd_LID_moderate = dataset_LID[dataset_LID[dyskinesia_strategy]=="moderate"][psd_segment].to_list()
+    psd_noLID_noDOPA = dataset["noLID_noDOPA"][psd_segment].to_list()
+    psd_noLID_DOPA   = dataset["noLID_DOPA"][psd_segment].to_list()
+    psd_LID_mild     = dataset["mild"][psd_segment].to_list()
+    psd_LID_moderate = dataset["moderate"][psd_segment].to_list()
     
     freq             = np.linspace(4,100,97) # fixed
 

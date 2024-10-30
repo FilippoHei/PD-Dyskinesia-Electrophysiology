@@ -76,41 +76,11 @@ def extract_normalized_psd_of_events(SUB, patient_dataset, patient_baseline, rec
     if(recording_type=="LFP"):
         df_power_spectrum = pd.DataFrame(columns=['patient', 'event_no', 'event_category', 'event_laterality',
                                                   'event_start_time', 'duration', 'LFP_hemisphere', 'LFP_channel',
-                                                  'pre_event_psd', 'event_psd', 'post_event_psd', 'dyskinesia_arm', 'dyskinesia_total',
-                                                  # pre-event features
-                                                  "pre_event_beta_peak", "pre_event_beta_peak_frequency", 
-                                                  "pre_event_gamma_peak", "pre_event_gamma_peak_frequency", 
-                                                  "pre_event_theta_mean", "pre_event_alpha_mean", "pre_event_beta_low_mean", 
-                                                  "pre_event_beta_high_mean", "pre_event_gamma_mean",
-                                                  # event features
-                                                  "event_beta_peak", "event_beta_peak_frequency", 
-                                                  "event_gamma_peak", "event_gamma_peak_frequency", 
-                                                  "event_theta_mean", "event_alpha_mean", "event_beta_low_mean", 
-                                                  "event_beta_high_mean", "event_gamma_mean",
-                                                  # post-event features
-                                                  "post_event_beta_peak", "post_event_beta_peak_frequency", 
-                                                  "post_event_gamma_peak", "post_event_gamma_peak_frequency", 
-                                                  "post_event_theta_mean", "post_event_alpha_mean", "post_event_beta_low_mean", 
-                                                  "post_event_beta_high_mean", "post_event_gamma_mean"])
+                                                  'pre_event_psd', 'event_psd', 'post_event_psd', 'dyskinesia_arm', 'dyskinesia_total'])
     else:
         df_power_spectrum = pd.DataFrame(columns=['patient', 'event_no', 'event_category', 'event_laterality',
                                                   'event_start_time', 'duration', 'ECoG_hemisphere', 'ECoG_channel',
-                                                  'pre_event_psd', 'event_psd', 'post_event_psd', 'dyskinesia_arm', 'dyskinesia_total',
-                                                  # pre-event features
-                                                  "pre_event_beta_peak", "pre_event_beta_peak_frequency", 
-                                                  "pre_event_gamma_peak", "pre_event_gamma_peak_frequency", 
-                                                  "pre_event_theta_mean", "pre_event_alpha_mean", "pre_event_beta_low_mean", 
-                                                  "pre_event_beta_high_mean", "pre_event_gamma_mean",
-                                                  # event features
-                                                  "event_beta_peak", "event_beta_peak_frequency", 
-                                                  "event_gamma_peak", "event_gamma_peak_frequency", 
-                                                  "event_theta_mean", "event_alpha_mean", "event_beta_low_mean", 
-                                                  "event_beta_high_mean", "event_gamma_mean",
-                                                  # post-event features
-                                                  "post_event_beta_peak", "post_event_beta_peak_frequency", 
-                                                  "post_event_gamma_peak", "post_event_gamma_peak_frequency", 
-                                                  "post_event_theta_mean", "post_event_alpha_mean", "post_event_beta_low_mean", 
-                                                  "post_event_beta_high_mean", "post_event_gamma_mean"])
+                                                  'pre_event_psd', 'event_psd', 'post_event_psd', 'dyskinesia_arm', 'dyskinesia_total'])
     
     # iterate in the event dataframe
     for index, row in patient_dataset.iterrows():
@@ -159,93 +129,9 @@ def extract_normalized_psd_of_events(SUB, patient_dataset, patient_baseline, rec
         psd_row['pre_event_psd']    = psd_pre_event_norm
         psd_row['event_psd']        = psd_event_norm
         psd_row['post_event_psd']   = psd_post_event_norm
-
-        peaks_pre_event                           = find_peaks_in_frequency_bands(freq, psd_pre_event_norm)
-        psd_row['pre_event_beta_peak']            = peaks_pre_event['beta_peak']
-        psd_row['pre_event_beta_peak_frequency']  = peaks_pre_event['beta_peak_frequency']
-        psd_row['pre_event_gamma_peak']           = peaks_pre_event['gamma_peak']
-        psd_row['pre_event_gamma_peak_frequency'] = peaks_pre_event['gamma_peak_frequency']
-        psd_row['pre_event_theta_mean']           = np.mean(psd_pre_event_norm[(freq>=4) & (freq<=8)]) 
-        psd_row['pre_event_alpha_mean']           = np.mean(psd_pre_event_norm[(freq>=8) & (freq<=12)]) 
-        psd_row['pre_event_beta_low_mean']        = np.mean(psd_pre_event_norm[(freq>=12) & (freq<=20)]) 
-        psd_row['pre_event_beta_high_mean']       = np.mean(psd_pre_event_norm[(freq>=20) & (freq<=35)]) 
-        psd_row['pre_event_gamma_mean']           = np.mean(psd_pre_event_norm[(freq>=60) & (freq<=90)]) 
-
-        peaks_event                           = find_peaks_in_frequency_bands(freq, psd_event_norm)
-        psd_row['event_beta_peak']            = peaks_event['beta_peak']
-        psd_row['event_beta_peak_frequency']  = peaks_event['beta_peak_frequency']
-        psd_row['event_gamma_peak']           = peaks_event['gamma_peak']
-        psd_row['event_gamma_peak_frequency'] = peaks_event['gamma_peak_frequency']
-        psd_row['event_theta_mean']           = np.mean(psd_event_norm[(freq>=4) & (freq<=8)]) 
-        psd_row['event_alpha_mean']           = np.mean(psd_event_norm[(freq>=8) & (freq<=12)]) 
-        psd_row['event_beta_low_mean']        = np.mean(psd_event_norm[(freq>=12) & (freq<=20)]) 
-        psd_row['event_beta_high_mean']       = np.mean(psd_event_norm[(freq>=20) & (freq<=35)]) 
-        psd_row['event_gamma_mean']           = np.mean(psd_event_norm[(freq>=60) & (freq<=90)]) 
-
-        peaks_post_event                           = find_peaks_in_frequency_bands(freq, psd_post_event_norm)
-        psd_row['post_event_beta_peak']            = peaks_post_event['beta_peak']
-        psd_row['post_event_beta_peak_frequency']  = peaks_post_event['beta_peak_frequency']
-        psd_row['post_event_gamma_peak']           = peaks_post_event['gamma_peak']
-        psd_row['post_event_gamma_peak_frequency'] = peaks_post_event['gamma_peak_frequency']
-        psd_row['post_event_theta_mean']           = np.mean(psd_post_event_norm[(freq>=4) & (freq<=8)]) 
-        psd_row['post_event_alpha_mean']           = np.mean(psd_post_event_norm[(freq>=8) & (freq<=12)]) 
-        psd_row['post_event_beta_low_mean']        = np.mean(psd_post_event_norm[(freq>=12) & (freq<=20)]) 
-        psd_row['post_event_beta_high_mean']       = np.mean(psd_post_event_norm[(freq>=20) & (freq<=35)]) 
-        psd_row['post_event_gamma_mean']           = np.mean(psd_post_event_norm[(freq>=60) & (freq<=90)]) 
-
         df_power_spectrum.loc[len(df_power_spectrum)] = psd_row
 
     return freq, df_power_spectrum
-
-def find_peaks_in_frequency_bands(freq, psd):
-    
-    peaks                = {}
-    
-    # gamma band (60-90)
-    freq_gamma           = freq[(freq>=60) & (freq<=90)]
-    psd_gamma            = psd[(freq>=60) & (freq<=90)]
-    
-    try:
-        index_gamma          = find_most_prominent_peak_index(psd_gamma)
-        peak_gamma           = psd_gamma[index_gamma]
-        peak_frequency_gamma = freq_gamma[index_gamma]
-        peaks["gamma_peak"]           = peak_gamma
-        peaks["gamma_peak_frequency"] = peak_frequency_gamma
-    except:
-        peaks["gamma_peak"]           = np.nan
-        peaks["gamma_peak_frequency"] = np.nan
-    
-    # beta band (12-35)
-    freq_beta            = freq[(freq>=12) & (freq<=35)]
-    psd_beta             = psd[(freq>=12) & (freq<=35)] 
-    
-    try:
-        index_beta                    = find_most_prominent_peak_index(-psd_beta)
-        peak_beta                     = psd_beta[index_beta]
-        peak_frequency_beta           = freq_beta[index_beta]
-        peaks["beta_peak"]            = peak_beta
-        peaks["beta_peak_frequency"]  = peak_frequency_beta
-    except:
-        peaks["beta_peak"]            = np.nan
-        peaks["beta_peak_frequency"]  = np.nan
-
-    return peaks
-
-def find_most_prominent_peak_index(data): 
-    
-    # Find all peaks in the inverted data
-    peaks, _ = find_peaks(data)
-    
-    # Calculate prominences of the peaks
-    prominences = peak_prominences(data, peaks)[0]
-    
-    # Find the index of the most prominent peak
-    most_prominent_peak_idx = np.argmax(prominences)
-    
-    # Get the index of the most prominent peak in the original data
-    most_prominent_peak = peaks[most_prominent_peak_idx]
-    
-    return most_prominent_peak
 
 def normalize_patient_ephysiology_event_psd_to_baseline(df_events, recording_type, event_mode, PATH):
 
@@ -269,6 +155,7 @@ def normalize_patient_ephysiology_event_psd_to_baseline(df_events, recording_typ
 
         try:
             freq, psd_LID  = extract_normalized_psd_of_events(SUB, patient_LID, patient_baseline, recording_type)
+            psd_LID        = extract_PSD_features_for_events(psd_LID)
             if(len(df_LID) == 0):
                 df_LID = psd_LID
             else:
@@ -278,6 +165,7 @@ def normalize_patient_ephysiology_event_psd_to_baseline(df_events, recording_typ
     
         try:
             freq, psd_noLID = extract_normalized_psd_of_events(SUB, patient_noLID, patient_baseline, recording_type)
+            psd_noLID       = extract_PSD_features_for_events(psd_noLID)
             if(len(df_noLID) == 0):
                 df_noLID = psd_noLID
             else:
@@ -325,55 +213,16 @@ def measure_baseline_psd(baseline_recordings):
 
 ###################################################################################################################################
 
-"""
-def extract_spectral_features(frequency, psd, mode):
+def measure_maximum_deviation(array):
+    positive_max = max([x for x in array if x > 0], default=0)
+    negative_min = min([x for x in array if x < 0], default=0)
+    return positive_max if positive_max >= abs(negative_min) else negative_min
     
-    if(mode=="peak"):
-        peaks, _       = signal.find_peaks(psd, width=2)
-    else: # find valleys
-        data           = np.array(psd)
-
-        # if there are positive peaks which higher than valley, it can obscure the negative peak estimation
-        # hence we replace all positive values with zeros and get the absolute of array values.
-        data[data>=0]  = 0
-        data           = np.abs(data)
-        peaks, _       = signal.find_peaks(data, width=2)
-    
-    # Find the peak with the greatest value
-    if peaks.size > 0:
-        peak_index     = peaks[np.argmax(np.abs(psd[peaks]))]
-        peak_frequency = frequency[peak_index]
-        peak_value     = psd[peak_index]
-    else:
-        peak_frequency = np.nan
-        peak_value     = np.nan
-
-    features                   = {} 
-    features["peak_frequency"] = peak_frequency
-    features["peak_value"]     = peak_value
-    features["mean_value"]     = np.nanmean(psd)
-        
-    return features
-"""
 def extract_spectral_features(frequency, psd):
     
-    data     = np.array(psd)
-    data     = np.abs(data)
-    peaks, _ = signal.find_peaks(data, width=2)
-    
-    # Find the peak with the greatest value
-    if peaks.size > 0:
-        peak_index     = peaks[np.argmax(np.abs(psd[peaks]))]
-        peak_frequency = frequency[peak_index]
-        peak_value     = psd[peak_index]
-    else:
-        peak_frequency = np.nan
-        peak_value     = np.nan
-
-    features                   = {} 
-    features["peak_frequency"] = peak_frequency
-    features["peak_value"]     = peak_value
-    features["mean_value"]     = np.nanmean(psd)
+    features                    = {} 
+    features["deviation_value"] = measure_maximum_deviation(psd)
+    features["mean_value"]      = np.nanmean(psd)
         
     return features
 
@@ -384,45 +233,64 @@ def extract_spectral_features_for_event_segment(segment_psd, segment_name):
 
     theta     = extract_spectral_features(frequency=frequency[(frequency>=4)  & (frequency<=8)] , psd=segment_psd[(frequency>=4)  & (frequency<=8)])
     alpha     = extract_spectral_features(frequency=frequency[(frequency>=8)  & (frequency<=12)], psd=segment_psd[(frequency>=8)  & (frequency<=12)])
+    beta      = extract_spectral_features(frequency=frequency[(frequency>=12) & (frequency<=35)], psd=segment_psd[(frequency>=12) & (frequency<=35)])
     beta_low  = extract_spectral_features(frequency=frequency[(frequency>=12) & (frequency<=20)], psd=segment_psd[(frequency>=12) & (frequency<=20)])
     beta_high = extract_spectral_features(frequency=frequency[(frequency>=20) & (frequency<=35)], psd=segment_psd[(frequency>=20) & (frequency<=35)])
     gamma     = extract_spectral_features(frequency=frequency[(frequency>=60) & (frequency<=90)], psd=segment_psd[(frequency>=60) & (frequency<=90)])
+    gamma_I   = extract_spectral_features(frequency=frequency[(frequency>=60) & (frequency<=70)], psd=segment_psd[(frequency>=60) & (frequency<=70)])
+    gamma_II  = extract_spectral_features(frequency=frequency[(frequency>=70) & (frequency<=80)], psd=segment_psd[(frequency>=70) & (frequency<=80)])
+    gamma_III = extract_spectral_features(frequency=frequency[(frequency>=80) & (frequency<=90)], psd=segment_psd[(frequency>=80) & (frequency<=90)])
     
-    LFP_features[segment_name + "_theta_peak"]               = theta["peak_value"]
-    LFP_features[segment_name + "_theta_peak_frequency"]     = theta["peak_frequency"]
-    LFP_features[segment_name + "_theta_mean"]               = theta["mean_value"]
-    LFP_features[segment_name + "_alpha_peak"]               = alpha["peak_value"]
-    LFP_features[segment_name + "_alpha_peak_frequency"]     = alpha["peak_frequency"]
-    LFP_features[segment_name + "_alpha_mean"]               = alpha["mean_value"]
-    LFP_features[segment_name + "_beta_low_peak"]            = beta_low["peak_value"]
-    LFP_features[segment_name + "_beta_low_peak_frequency"]  = beta_low["peak_frequency"]
-    LFP_features[segment_name + "_beta_low_mean"]            = beta_low["mean_value"]
-    LFP_features[segment_name + "_beta_high_peak"]           = beta_high["peak_value"]
-    LFP_features[segment_name + "_beta_high_peak_frequency"] = beta_high["peak_frequency"]
-    LFP_features[segment_name + "_beta_high_mean"]           = beta_high["mean_value"]
-    LFP_features[segment_name + "_gamma_peak"]             = gamma["peak_value"]
-    LFP_features[segment_name + "_gamma_peak_frequency"]   = gamma["peak_frequency"]
-    LFP_features[segment_name + "_gamma_mean"]             = gamma["mean_value"]
+    LFP_features[segment_name + "_theta_deviation"]     = theta["deviation_value"]
+    LFP_features[segment_name + "_theta_mean"]          = theta["mean_value"]
+    LFP_features[segment_name + "_alpha_deviation"]     = alpha["deviation_value"]
+    LFP_features[segment_name + "_alpha_mean"]          = alpha["mean_value"]
+    LFP_features[segment_name + "_beta_deviation"]      = beta["deviation_value"]
+    LFP_features[segment_name + "_beta_mean"]           = beta["mean_value"]
+    LFP_features[segment_name + "_beta_low_deviation"]  = beta_low["deviation_value"]
+    LFP_features[segment_name + "_beta_low_mean"]       = beta_low["mean_value"]
+    LFP_features[segment_name + "_beta_high_deviation"] = beta_high["deviation_value"]
+    LFP_features[segment_name + "_beta_high_mean"]      = beta_high["mean_value"]
+    LFP_features[segment_name + "_gamma_deviation"]     = gamma["deviation_value"]
+    LFP_features[segment_name + "_gamma_mean"]          = gamma["mean_value"]
+    LFP_features[segment_name + "_gamma_I_deviation"]   = gamma_I["deviation_value"]
+    LFP_features[segment_name + "_gamma_I_mean"]        = gamma_I["mean_value"]
+    LFP_features[segment_name + "_gamma_II_deviation"]  = gamma_II["deviation_value"]
+    LFP_features[segment_name + "_gamma_II_mean"]       = gamma_II["mean_value"]
+    LFP_features[segment_name + "_gamma_III_deviation"] = gamma_III["deviation_value"]
+    LFP_features[segment_name + "_gamma_III_mean"]      = gamma_III["mean_value"]
 
     return LFP_features
 
 def extract_PSD_features_for_events(dataset):
     # create new features for the dataframe
-    for feature in ['pre_event_theta_peak', 'pre_event_theta_peak_frequency', 'pre_event_theta_mean', 
-                    'pre_event_alpha_peak', 'pre_event_alpha_peak_frequency', 'pre_event_alpha_mean', 
-                    'pre_event_beta_low_peak', 'pre_event_beta_low_peak_frequency', 'pre_event_beta_low_mean', 
-                    'pre_event_beta_high_peak', 'pre_event_beta_high_peak_frequency', 'pre_event_beta_high_mean', 
-                    'pre_event_gamma_peak', 'pre_event_gamma_peak_frequency', 'pre_event_gamma_mean'
-                    'event_theta_peak', 'event_theta_peak_frequency', 'event_theta_mean', 
-                    'event_alpha_peak', 'event_alpha_peak_frequency', 'event_alpha_mean', 
-                    'event_beta_low_peak', 'event_beta_low_peak_frequency', 'event_beta_low_mean', 
-                    'event_beta_high_peak', 'event_beta_high_peak_frequency', 'event_beta_high_mean', 
-                    'event_gamma_peak', 'event_gamma_peak_frequency', 'event_gamma_mean',
-                    'post_event_theta_peak', 'post_event_theta_peak_frequency', 'post_event_theta_mean', 
-                    'post_event_alpha_peak', 'post_event_alpha_peak_frequency', 'post_event_alpha_mean', 
-                    'post_event_beta_low_peak', 'post_event_beta_low_peak_frequency', 'post_event_beta_low_mean', 
-                    'post_event_beta_high_peak', 'post_event_beta_high_peak_frequency', 'post_event_beta_high_mean', 
-                    'post_event_gamma_peak', 'post_event_gamma_peak_frequency', 'post_event_gamma_mean']:
+    for feature in ['pre_event_theta_deviation', 'pre_event_theta_mean', 
+                    'pre_event_alpha_deviation', 'pre_event_alpha_mean',
+                    'pre_event_beta_deviation','pre_event_beta_mean',
+                    'pre_event_beta_low_deviation', 'pre_event_beta_low_mean', 
+                    'pre_event_beta_high_deviation', 'pre_event_beta_high_mean', 
+                    'pre_event_gamma_deviation', 'pre_event_gamma_mean',
+                    'pre_event_gamma_I_deviation', 'pre_event_gamma_I_mean',
+                    'pre_event_gamma_II_deviation', 'pre_event_gamma_II_mean',
+                    'pre_event_gamma_III_deviation', 'pre_event_gamma_III_mean',
+                    'event_theta_deviation', 'event_theta_mean', 
+                    'event_alpha_deviation', 'event_alpha_mean',
+                    'event_beta_deviation', 'event_beta_mean', 
+                    'event_beta_low_deviation', 'event_beta_low_mean', 
+                    'event_beta_high_deviation', 'event_beta_high_mean', 
+                    'event_gamma_deviation', 'event_gamma_mean',
+                    'event_gamma_I_deviation', 'event_I_gamma_mean',
+                    'event_gamma_II_deviation', 'event_II_gamma_mean',
+                    'event_gamma_III_deviation', 'event_III_gamma_mean',
+                    'post_event_theta_deviation', 'post_event_theta_mean', 
+                    'post_event_alpha_deviation', 'post_event_alpha_mean',
+                    'post_event_beta_deviation', 'post_event_beta_mean',
+                    'post_event_beta_low_deviation', 'post_event_beta_low_mean', 
+                    'post_event_beta_high_deviation', 'post_event_beta_high_mean', 
+                    'post_event_gamma_deviation', 'post_event_gamma_mean',
+                    'post_event_I_gamma_deviation', 'post_event_I_gamma_mean',
+                    'post_event_II_gamma_deviation', 'post_event_II_gamma_mean',
+                    'post_event_III_gamma_deviation', 'post_event_III_gamma_mean']:
         dataset[feature] = np.nan
     
     # add new features to the dataframe
@@ -437,52 +305,73 @@ def extract_PSD_features_for_events(dataset):
         features.update(event_LFP_features)
         features.update(post_event_LFP_features)
 
-        dataset.at[index, 'pre_event_theta_peak']               = pre_event_LFP_features['pre_event_theta_peak']
-        dataset.at[index, 'pre_event_theta_peak_frequency']     = pre_event_LFP_features['pre_event_theta_peak_frequency']
-        dataset.at[index, 'pre_event_theta_mean']               = pre_event_LFP_features['pre_event_theta_mean']
-        dataset.at[index, 'pre_event_alpha_peak']               = pre_event_LFP_features['pre_event_alpha_peak']
-        dataset.at[index, 'pre_event_alpha_peak_frequency']     = pre_event_LFP_features['pre_event_alpha_peak_frequency']
-        dataset.at[index, 'pre_event_alpha_mean']               = pre_event_LFP_features['pre_event_alpha_mean']
-        dataset.at[index, 'pre_event_beta_low_peak']            = pre_event_LFP_features['pre_event_beta_low_peak']
-        dataset.at[index, 'pre_event_beta_low_peak_frequency']  = pre_event_LFP_features['pre_event_beta_low_peak_frequency']
-        dataset.at[index, 'pre_event_beta_low_mean']            = pre_event_LFP_features['pre_event_beta_low_mean']
-        dataset.at[index, 'pre_event_beta_high_peak']           = pre_event_LFP_features['pre_event_beta_high_peak']
-        dataset.at[index, 'pre_event_beta_high_peak_frequency'] = pre_event_LFP_features['pre_event_beta_high_peak_frequency']
-        dataset.at[index, 'pre_event_beta_high_mean']           = pre_event_LFP_features['pre_event_beta_high_mean']
-        dataset.at[index, 'pre_event_gamma_peak']               = pre_event_LFP_features['pre_event_gamma_peak']
-        dataset.at[index, 'pre_event_gamma_peak_frequency']     = pre_event_LFP_features['pre_event_gamma_peak_frequency']
-        dataset.at[index, 'pre_event_gamma_mean']               = pre_event_LFP_features['pre_event_gamma_mean']
+        dataset.at[index, 'pre_event_theta_deviation']      = pre_event_LFP_features['pre_event_theta_deviation']
+        dataset.at[index, 'pre_event_theta_mean']           = pre_event_LFP_features['pre_event_theta_mean']
+        dataset.at[index, 'pre_event_alpha_deviation']      = pre_event_LFP_features['pre_event_alpha_deviation']
+        dataset.at[index, 'pre_event_alpha_mean']           = pre_event_LFP_features['pre_event_alpha_mean']
+        dataset.at[index, 'pre_event_beta_deviation']       = pre_event_LFP_features['pre_event_beta_deviation']
+        dataset.at[index, 'pre_event_beta_mean']            = pre_event_LFP_features['pre_event_beta_mean']
+        dataset.at[index, 'pre_event_beta_low_deviation']   = pre_event_LFP_features['pre_event_beta_low_deviation']
+        dataset.at[index, 'pre_event_beta_low_mean']        = pre_event_LFP_features['pre_event_beta_low_mean']
+        dataset.at[index, 'pre_event_beta_high_deviation']  = pre_event_LFP_features['pre_event_beta_high_deviation']
+        dataset.at[index, 'pre_event_beta_high_mean']       = pre_event_LFP_features['pre_event_beta_high_mean']
+        dataset.at[index, 'pre_event_gamma_deviation']      = pre_event_LFP_features['pre_event_gamma_deviation']
+        dataset.at[index, 'pre_event_gamma_mean']           = pre_event_LFP_features['pre_event_gamma_mean']
+        dataset.at[index, 'pre_event_gamma_I_deviation']    = pre_event_LFP_features['pre_event_gamma_I_deviation']
+        dataset.at[index, 'pre_event_gamma_I_mean']         = pre_event_LFP_features['pre_event_gamma_I_mean']
+        dataset.at[index, 'pre_event_gamma_II_deviation']   = pre_event_LFP_features['pre_event_gamma_II_deviation']
+        dataset.at[index, 'pre_event_gamma_II_mean']        = pre_event_LFP_features['pre_event_gamma_II_mean']
+        dataset.at[index, 'pre_event_gamma_III_deviation']  = pre_event_LFP_features['pre_event_gamma_III_deviation']
+        dataset.at[index, 'pre_event_gamma_III_mean']       = pre_event_LFP_features['pre_event_gamma_III_mean']
         
-        dataset.at[index, 'event_theta_peak']               = event_LFP_features['event_theta_peak']
-        dataset.at[index, 'event_theta_peak_frequency']     = event_LFP_features['event_theta_peak_frequency']
+        dataset.at[index, 'event_theta_deviation']          = event_LFP_features['event_theta_deviation']
         dataset.at[index, 'event_theta_mean']               = event_LFP_features['event_theta_mean']
-        dataset.at[index, 'event_alpha_peak']               = event_LFP_features['event_alpha_peak']
-        dataset.at[index, 'event_alpha_peak_frequency']     = event_LFP_features['event_alpha_peak_frequency']
+        dataset.at[index, 'event_alpha_deviation']          = event_LFP_features['event_alpha_deviation']
         dataset.at[index, 'event_alpha_mean']               = event_LFP_features['event_alpha_mean']
-        dataset.at[index, 'event_beta_low_peak']            = event_LFP_features['event_beta_low_peak']
-        dataset.at[index, 'event_beta_low_peak_frequency']  = event_LFP_features['event_beta_low_peak_frequency']
+        dataset.at[index, 'event_beta_deviation']           = event_LFP_features['event_beta_deviation']
+        dataset.at[index, 'event_beta_mean']                = event_LFP_features['event_beta_mean']
+        dataset.at[index, 'event_beta_low_deviation']       = event_LFP_features['event_beta_low_deviation']
         dataset.at[index, 'event_beta_low_mean']            = event_LFP_features['event_beta_low_mean']
-        dataset.at[index, 'event_beta_high_peak']           = event_LFP_features['event_beta_high_peak']
-        dataset.at[index, 'event_beta_high_peak_frequency'] = event_LFP_features['event_beta_high_peak_frequency']
+        dataset.at[index, 'event_beta_high_deviation']      = event_LFP_features['event_beta_high_deviation']
         dataset.at[index, 'event_beta_high_mean']           = event_LFP_features['event_beta_high_mean']
-        dataset.at[index, 'event_gamma_peak']               = event_LFP_features['event_gamma_peak']
-        dataset.at[index, 'event_gamma_peak_frequency']     = event_LFP_features['event_gamma_peak_frequency']
+        dataset.at[index, 'event_gamma_deviation']          = event_LFP_features['event_gamma_deviation']
         dataset.at[index, 'event_gamma_mean']               = event_LFP_features['event_gamma_mean']
+        dataset.at[index, 'event_gamma_I_deviation']        = event_LFP_features['event_gamma_I_deviation']
+        dataset.at[index, 'event_gamma_I_mean']             = event_LFP_features['event_gamma_I_mean']
+        dataset.at[index, 'event_gamma_II_deviation']       = event_LFP_features['event_gamma_II_deviation']
+        dataset.at[index, 'event_gamma_II_mean']            = event_LFP_features['event_gamma_II_mean']
+        dataset.at[index, 'event_gamma_III_deviation']      = event_LFP_features['event_gamma_III_deviation']
+        dataset.at[index, 'event_gamma_III_mean']           = event_LFP_features['event_gamma_III_mean']
 
-        dataset.at[index, 'post_event_theta_peak']               = post_event_LFP_features['post_event_theta_peak']
-        dataset.at[index, 'post_event_theta_peak_frequency']     = post_event_LFP_features['post_event_theta_peak_frequency']
-        dataset.at[index, 'post_event_theta_mean']               = post_event_LFP_features['post_event_theta_mean']
-        dataset.at[index, 'post_event_alpha_peak']               = post_event_LFP_features['post_event_alpha_peak']
-        dataset.at[index, 'post_event_alpha_peak_frequency']     = post_event_LFP_features['post_event_alpha_peak_frequency']
-        dataset.at[index, 'post_event_alpha_mean']               = post_event_LFP_features['post_event_alpha_mean']
-        dataset.at[index, 'post_event_beta_low_peak']            = post_event_LFP_features['post_event_beta_low_peak']
-        dataset.at[index, 'post_event_beta_low_peak_frequency']  = post_event_LFP_features['post_event_beta_low_peak_frequency']
-        dataset.at[index, 'post_event_beta_low_mean']            = post_event_LFP_features['post_event_beta_low_mean']
-        dataset.at[index, 'post_event_beta_high_peak']           = post_event_LFP_features['post_event_beta_high_peak']
-        dataset.at[index, 'post_event_beta_high_peak_frequency'] = post_event_LFP_features['post_event_beta_high_peak_frequency']
-        dataset.at[index, 'post_event_beta_high_mean']           = post_event_LFP_features['post_event_beta_high_mean']
-        dataset.at[index, 'post_event_gamma_peak']               = post_event_LFP_features['post_event_gamma_peak']
-        dataset.at[index, 'post_event_gamma_peak_frequency']     = post_event_LFP_features['post_event_gamma_peak_frequency']
-        dataset.at[index, 'post_event_gamma_mean']               = post_event_LFP_features['post_event_gamma_mean']
+        dataset.at[index, 'post_event_theta_deviation']     = post_event_LFP_features['post_event_theta_deviation']
+        dataset.at[index, 'post_event_theta_mean']          = post_event_LFP_features['post_event_theta_mean']
+        dataset.at[index, 'post_event_alpha_deviation']     = post_event_LFP_features['post_event_alpha_deviation']
+        dataset.at[index, 'post_event_alpha_mean']          = post_event_LFP_features['post_event_alpha_mean']
+        dataset.at[index, 'post_event_beta_deviation']      = post_event_LFP_features['post_event_beta_deviation']
+        dataset.at[index, 'post_event_beta_mean']           = post_event_LFP_features['post_event_beta_mean']
+        dataset.at[index, 'post_event_beta_low_deviation']  = post_event_LFP_features['post_event_beta_low_deviation']
+        dataset.at[index, 'post_event_beta_low_mean']       = post_event_LFP_features['post_event_beta_low_mean']
+        dataset.at[index, 'post_event_beta_high_deviation'] = post_event_LFP_features['post_event_beta_high_deviation']
+        dataset.at[index, 'post_event_beta_high_mean']      = post_event_LFP_features['post_event_beta_high_mean']
+        dataset.at[index, 'post_event_gamma_deviation']     = post_event_LFP_features['post_event_gamma_deviation']
+        dataset.at[index, 'post_event_gamma_mean']          = post_event_LFP_features['post_event_gamma_mean']
+        dataset.at[index, 'post_event_gamma_I_deviation']   = post_event_LFP_features['post_event_gamma_I_deviation']
+        dataset.at[index, 'post_event_gamma_I_mean']        = post_event_LFP_features['post_event_gamma_I_mean']
+        dataset.at[index, 'post_event_gamma_II_deviation']  = post_event_LFP_features['post_event_gamma_II_deviation']
+        dataset.at[index, 'post_event_gamma_II_mean']       = post_event_LFP_features['post_event_gamma_II_mean']
+        dataset.at[index, 'post_event_gamma_III_deviation'] = post_event_LFP_features['post_event_gamma_III_deviation']
+        dataset.at[index, 'post_event_gamma_III_mean']      = post_event_LFP_features['post_event_gamma_III_mean']
 
     return dataset
+
+def select_ECoG_PSD_based_on_cortical_parcellation(df_PSD, data_MNI, cortical_region):
+    
+    df_PSD_cortical_region = {}
+    
+    for severity in df_PSD.keys():
+        merged_df   = pd.merge(df_PSD[severity], data_MNI, left_on=['patient', 'ECoG_hemisphere'], right_on=['patient', 'hemisphere'])
+        filtered_df = merged_df[merged_df['AAL3_cortex'] == cortical_region]
+        filtered_df.reset_index(inplace=True, drop=True)
+        df_PSD_cortical_region[severity] = filtered_df
+
+    return df_PSD_cortical_region

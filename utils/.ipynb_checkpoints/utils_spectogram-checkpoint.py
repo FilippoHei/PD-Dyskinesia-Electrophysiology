@@ -14,7 +14,7 @@ sys.path.insert(0, './lib')
 def measure_TFR_for_patient_LFP_baseline(patient, baseline, fs):
 
     # create an empty dataframe
-    df_channel_baseline_spectogram = pd.DataFrame(columns=["patient", "LFP_hemisphere", "LFP_channel", "frequency_mean", "frequency_std"])
+    df_channel_baseline_spectogram = pd.DataFrame(columns=["patient", "LFP_hemisphere", "LFP_channel", "baseline_frequency_mean", "baseline_frequency_std"])
         
     for hemisphere in baseline[patient].keys():
         for channel in baseline[patient][hemisphere].keys():
@@ -22,16 +22,16 @@ def measure_TFR_for_patient_LFP_baseline(patient, baseline, fs):
             # for the selected hemisphere and the channel for patient, get the baseline recordings.
             channel_baseline          = baseline[patient][hemisphere][channel]
 
-            # since the baseline recordings corresponds to 5 minutes, we will divide the baseline into 4 seconds segments with
-            # 50% overalap. And for each segment, we will estimate the MWT and measure and average  spectogram for 4 seconds for baseline (N x fs*4).
+            # Since the baseline recordings correspond to 5 minutes, we will divide the baseline into 4 seconds segments with
+            # 50% overlap. For each segment, we will estimate the MWT and measure the average  spectrogram for 4 seconds for baseline (N x fs*4).
             # Furthermore, we also take the average of all columns to represent baseline MWT as (M X 1) vector. Then we will use either this vector
-            # mean and std values of each frequency in average baseline MWT. So, we will save both, baseline MWT column, mean and std values for each
+            # mean and std values of each frequency in average baseline MWT. So, we will save both, the baseline MWT column, mean, and std values for each
             # frequency.
 
             segment_length            = (fs*4)
             segment_overlap           = segment_length / 2
 
-            # get the start indices of each segments in baseline recording
+            # get the start indices of each segment in baseline recording
             start_indices             = np.arange(0, len(channel_baseline) - segment_length + 1, segment_overlap).astype(int)
             
             # get baseline segments
@@ -41,10 +41,9 @@ def measure_TFR_for_patient_LFP_baseline(patient, baseline, fs):
             channel_baseline_segments = np.array(channel_baseline_segments).reshape(np.shape(channel_baseline_segments)[0], 1, 
                                                                                     np.shape(channel_baseline_segments)[1])
             # measure the spectogram for each segment
-            baseline_spectogram       = tfr_array_morlet(channel_baseline_segments, sfreq=fs, n_cycles=5, freqs=np.linspace(4,90,87), 
-                                                         output='power', verbose=False) 
+            baseline_spectogram       = tfr_array_morlet(channel_baseline_segments, sfreq=fs, n_cycles=5, freqs=np.linspace(4,90,87), output='power', verbose=False) 
 
-            # measure the average spectogram across all segments (N x fs*4)
+            # measure the average spectrogram across all segments (N x fs*4)
             baseline_spectogram       = np.nanmean(baseline_spectogram, axis=0)[0]
 
             # get the mean value for each frequency (from 4-90Hz)

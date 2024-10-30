@@ -125,15 +125,15 @@ def map_ecog_activity_to_cortex_by_radius_v2(ecog_activity, cortex_mesh, feature
     Returns:
     - cortex_mesh: PyVista PolyData object representing the cortical atlas mesh with interpolated feature values.
     """
-    # Extract points from cortex mesh
+    # extract points from cortex mesh
     cortex_points = cortex_mesh.copy().points
 
-    # Extract ECoG points and values
+    # extract ECoG points and values
     ecog_activity_filtered   = ecog_activity.copy()[feature][['x', 'y', 'z', severity]].dropna(subset=[severity])
     ecog_channel_coordinates = ecog_activity_filtered[['x', 'y', 'z']].values
     ecog_feature_values      = ecog_activity_filtered[severity].values
 
-    # Create a mask for points within the radius
+    # create a mask for points within the radius
     mask = np.zeros(cortex_points.shape[0], dtype=bool)
 
     for ecog_coord in ecog_channel_coordinates:
@@ -141,26 +141,26 @@ def map_ecog_activity_to_cortex_by_radius_v2(ecog_activity, cortex_mesh, feature
         distances = np.linalg.norm(cortex_points - ecog_coord, axis=1)
         mask |= (distances < radius)
 
-    # Interpolate only for the points within the mask
+    # interpolate only for the points within the mask
     rbf = Rbf(ecog_channel_coordinates[:, 0], ecog_channel_coordinates[:, 1], ecog_channel_coordinates[:, 2], 
-              ecog_feature_values, function='linear')
+              ecog_feature_values, function='gaussian')
     
-    # Initialize the feature in the cortex mesh with zeros
+    # initialize the feature in the cortex mesh with zeros
     cortex_mesh[feature] = np.zeros(cortex_points.shape[0])  # or any other default value
 
-    # Map ECoG feature values onto the cortical surface for the points within the mask
+    # map ECoG feature values onto the cortical surface for the points within the mask
     interpolated_values        = rbf(cortex_points[mask, 0], cortex_points[mask, 1], cortex_points[mask, 2])
     cortex_mesh[feature][mask] = interpolated_values
 
-    # Get min and max from the original ECoG data
+    # get min and max from the original ECoG data
     min_val = ecog_feature_values.min()
     max_val = ecog_feature_values.max()
 
-    # Scale interpolated values to the original min and max
+    # scale interpolated values to the original min and max
     if interpolated_values.max() != interpolated_values.min():  # Avoid division by zero
         cortex_mesh[feature][mask] = min_val + (interpolated_values - interpolated_values.min()) * (max_val - min_val) / (interpolated_values.max() - interpolated_values.min())
     else:
-        cortex_mesh[feature][mask] = np.full(interpolated_values.shape, min_val)  # If all interpolated values are the same
+        cortex_mesh[feature][mask] = np.full(interpolated_values.shape, min_val)  # if all interpolated values are the same
 
     return cortex_mesh
     

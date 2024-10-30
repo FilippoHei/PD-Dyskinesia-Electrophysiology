@@ -1,0 +1,121 @@
+voxel_no,anatomical_description,AAL2_label,abbreviation
+0,1,Precentral gyrus,Precentral,PreCG
+1,2,Precentral gyrus,Precentral,PreCG
+2,3,"Superior frontal gyrus, dorsolateral",Frontal_Sup,SFG
+3,4,"Superior frontal gyrus, dorsolateral",Frontal_Sup,SFG
+4,5,Middle frontal gyrus,Frontal_Mid,MFG
+5,6,Middle frontal gyrus,Frontal_Mid,MFG
+6,7,"Inferior frontal gyrus, opercular part",Frontal_Inf_Oper,IFGoperc
+7,8,"Inferior frontal gyrus, opercular part",Frontal_Inf_Oper,IFGoperc
+8,9,"Inferior frontal gyrus, triangular part",Frontal_Inf_Tri,IFGtriang
+9,10,"Inferior frontal gyrus, triangular part",Frontal_Inf_Tri,IFGtriang
+10,11,IFG pars orbitalis,Frontal_Inf_Orb,IFGorb
+11,12,IFG pars orbitalis,Frontal_Inf_Orb,IFGorb
+12,13,Rolandic operculum,Rolandic_Oper,ROL
+13,14,Rolandic operculum,Rolandic_Oper,ROL
+14,15,Supplementary motor area,Supp_Motor_Area,SMA
+15,16,Supplementary motor area,Supp_Motor_Area,SMA
+16,17,Olfactory cortex,Olfactory,OLF
+17,18,Olfactory cortex,Olfactory,OLF
+18,19,"Superior frontal gyrus, medial",Frontal_Sup_Med,SFGmedial
+19,20,"Superior frontal gyrus, medial",Frontal_Sup_Med,SFGmedial
+20,21,"Superior frontal gyrus, medial orbital",Frontal_Med_Orb,PFCventmed
+21,22,"Superior frontal gyrus, medial orbital",Frontal_Med_Orb,PFCventmed
+22,23,Gyrus rectus,Rectus,REC
+23,24,Gyrus rectus,Rectus,REC
+24,25,Medial orbital gyrus,OFCmed,OFCmed
+25,26,Medial orbital gyrus,OFCmed,OFCmed
+26,27,Anterior orbital gyrus,OFCant,OFCant
+27,28,Anterior orbital gyrus,OFCant,OFCant
+28,29,Posterior orbital gyrus,OFCpost,OFCpost
+29,30,Posterior orbital gyrus,OFCpost,OFCpost
+30,31,Lateral orbital gyrus,OFClat,OFClat
+31,32,Lateral orbital gyrus,OFClat,OFClat
+32,33,Insula,Insula,INS
+33,34,Insula,Insula,INS
+34,35,Anterior cingulate & paracingulate gyri,Cingulate_Ant,ACC
+35,36,Anterior cingulate & paracingulate gyri,Cingulate_Ant,ACC
+36,37,Middle cingulate & paracingulate gyri,Cingulate_Mid,MCC
+37,38,Middle cingulate & paracingulate gyri,Cingulate_Mid,MCC
+38,39,Posterior cingulate gyrus,Cingulate_Post,PCC
+39,40,Posterior cingulate gyrus,Cingulate_Post,PCC
+40,41,Hippocampus,Hippocampus,HIP
+41,42,Hippocampus,Hippocampus,HIP
+42,43,Parahippocampal gyrus,ParaHippocampal,PHG
+43,44,Parahippocampal gyrus,ParaHippocampal,PHG
+44,45,Amygdala,Amygdala,AMYG
+45,46,Amygdala,Amygdala,AMYG
+46,47,Calcarine fissure and surrounding cortex,Calcarine,CAL
+47,48,Calcarine fissure and surrounding cortex,Calcarine,CAL
+48,49,Cuneus,Cuneus,CUN
+49,50,Cuneus,Cuneus,CUN
+50,51,Lingual gyrus,Lingual,LING
+51,52,Lingual gyrus,Lingual,LING
+52,53,Superior occipital gyrus,Occipital_Sup,SOG
+53,54,Superior occipital gyrus,Occipital_Sup,SOG
+54,55,Middle occipital gyrus,Occipital_Mid,MOG
+55,56,Middle occipital gyrus,Occipital_Mid,MOG
+56,57,Inferior occipital gyrus,Occipital_Inf,IOG
+57,58,Inferior occipital gyrus,Occipital_Inf,IOG
+58,59,Fusiform gyrus,Fusiform,FFG
+59,60,Fusiform gyrus,Fusiform,FFG
+60,61,Postcentral gyrus,Postcentral,PoCG
+61,62,Postcentral gyrus,Postcentral,PoCG
+62,63,Superior parietal gyrus,Parietal_Sup,SPG
+63,64,Superior parietal gyrus,Parietal_Sup,SPG
+64,65,"Inferior parietal gyrus, excluding supramarginal and angular gyri",Parietal_Inf,IPG
+65,66,"Inferior parietal gyrus, excluding supramarginal and angular gyri",Parietal_Inf,IPG
+66,67,Supramarginal gyrus,SupraMarginal,SMG
+67,68,Supramarginal gyrus,SupraMarginal,SMG
+68,69,Angular gyrus,Angular,ANG
+69,70,Angular gyrus,Angular,ANG
+70,71,Precuneus,Precuneus,PCUN
+71,72,Precuneus,Precuneus,PCUN
+72,73,Paracentral lobule,Paracentral_Lobule,PCL
+73,74,Paracentral lobule,Paracentral lobule,PCL
+74,75,Caudate nucleus,Caudate,CAU
+75,76,Caudate nucleus,Caudate,CAU
+76,77,"Lenticular nucleus, Putamen",Putamen,PUT
+77,78,"Lenticular nucleus, Putamen",Putamen,PUT
+78,79,"Lenticular nucleus, Pallidum",Pallidum,PAL
+79,80,"Lenticular nucleus, Pallidum",Pallidum,PAL
+80,81,Thalamus,Thalamus,THA
+81,82,Thalamus,Thalamus,THA
+82,83,Heschl's gyrus,Heschl,HES
+83,84,Heschl's gyrus,Heschl,HES
+84,85,Superior temporal gyrus,Temporal_Sup,STG
+85,86,Superior temporal gyrus,Temporal_Sup,STG
+86,87,Temporal pole: superior temporal gyrus,Temporal_Pole_Sup,TPOsup
+87,88,Temporal pole: superior temporal gyrus,Temporal_Pole_Sup,TPOsup
+88,89,Middle temporal gyrus,Temporal_Mid,MTG
+89,90,Middle temporal gyrus,Temporal_Mid,MTG
+90,91,Temporal pole: middle temporal gyrus,Temporal_Pole_Mid,TPOmid
+91,92,Temporal pole: middle temporal gyrus,Temporal_Pole_Mid,TPOmid
+92,93,Inferior temporal gyrus,Temporal_Inf,ITG
+93,94,Inferior temporal gyrus,Temporal_Inf,ITG
+94,95,Crus I of cerebellar hemisphere,Cerebellum_Crus1,CERCRU1
+95,96,Crus I of cerebellar hemisphere,Cerebellum_Crus1,CERCRU1
+96,97,Crus II of cerebellar hemisphere,Cerebellum_Crus2,CERCRU2
+97,98,Crus II of cerebellar hemisphere,Cerebellum_Crus2,CERCRU2
+98,99,Lobule III of cerebellar hemisphere,Cerebellum_3,CER3
+99,100,Lobule III of cerebellar hemisphere,Cerebellum_3,CER3
+100,101,"Lobule IV, V of cerebellar hemisphere",Cerebellum_4_5,CER4_5
+101,102,"Lobule IV, V of cerebellar hemisphere",Cerebellum_4_5,CER4_5
+102,103,Lobule VI of cerebellar hemisphere,Cerebellum_6,CER6
+103,104,Lobule VI of cerebellar hemisphere,Cerebellum_6,CER6
+104,105,Lobule VIIB of cerebellar hemisphere,Cerebellum_7b,CER7b
+105,106,Lobule VIIB of cerebellar hemisphere,Cerebellum_7b,CER7b
+106,107,Lobule VIII of cerebellar hemisphere,Cerebellum_8,CER8
+107,108,Lobule VIII of cerebellar hemisphere,Cerebellum_8,CER8
+108,109,Lobule IX of cerebellar hemisphere,Cerebellum_9,CER9
+109,110,Lobule IX of cerebellar hemisphere,Cerebellum_9,CER9
+110,111,Lobule X of cerebellar hemisphere,Cerebellum_10,CER10
+111,112,Lobule X of cerebellar hemisphere,Cerebellum_10,CER10
+112,113,"Lobule I, II of vermis",Vermis_1_2,VER1_2
+113,114,Lobule III of vermis,Vermis_3,VER3
+114,115,"Lobule IV, V of vermis",Vermis_4_5,VER4_5
+115,116,Lobule VI of vermis,Vermis_6,VER6
+116,117,Lobule VII of vermis,Vermis_7,VER7
+117,118,Lobule VIII of vermis,Vermis_8,VER8
+118,119,Lobule IX of vermis,Vermis_9,VER9
+119,120,Lobule X of vermis,Vermis_10,VER10

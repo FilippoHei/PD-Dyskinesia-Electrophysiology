@@ -9,6 +9,7 @@ import os
 from os import listdir
 import pickle
 import pyvista as pv 
+import nibabel as nib
 
 # inserting the lib folder to the compiler
 sys.path.insert(0, './lib')
@@ -132,9 +133,13 @@ def load_LFP_event_PSD(event_category, event_laterality):
     if(event_laterality == "controlateral"):   
         data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/LFP/CONTROLATERAL_MOTOR_noLID.pkl")
         data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/LFP/CONTROLATERAL_MOTOR_LID.pkl")
+        data_noLID = data_noLID[data_noLID.patient!="019"]
+        data_LID   = data_LID[data_LID.patient!="019"]
     else:
         data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/LFP/IPSILATERAL_MOTOR_noLID.pkl")
         data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/LFP/IPSILATERAL_MOTOR_LID.pkl")
+        data_noLID = data_noLID[data_noLID.patient!="019"]
+        data_LID   = data_LID[data_LID.patient!="019"]
         
     event_dictionary["noLID_noDOPA"] = data_noLID[(data_noLID.event_start_time <= 30) & (data_noLID.event_category==event_category)]
     event_dictionary["noLID_DOPA"]   = data_noLID[(data_noLID.event_start_time > 30) & (data_noLID.event_category==event_category)]
@@ -159,6 +164,12 @@ def load_STN_meshes():
     meshes["right_hemisphere"] = pv.read(DATA_IO.path_atlas_subthalamic + 'stn_right.vtk')
     meshes["left_hemisphere"]  = pv.read(DATA_IO.path_atlas_subthalamic + 'stn_left.vtk')
     return meshes
+
+
+def load_AAL3_files_for_cortical_parcellation():
+    AAL3_image  = nib.load(DATA_IO.path_atlas_cortical + 'AAL3.nii')
+    AAL3_labels = pd.read_csv(DATA_IO.path_atlas_cortical + "AAL3_labels.csv")
+    return AAL3_image, AAL3_labels
 
     
     

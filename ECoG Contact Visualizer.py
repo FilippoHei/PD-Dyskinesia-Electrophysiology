@@ -1,7 +1,5 @@
 import pyvista as pv 
-import pyvista
-from pyvista import demos
-from pyvista import examples 
+
 import pandas as pd
 import numpy as np
 import scipy.io
@@ -52,7 +50,7 @@ plotter.add_mesh(cortex_left, color='dimgray', opacity=0.025, specular=5, specul
 
 for index, contact in MNI_ECoG_coordinates.iterrows():
     plotter.add_mesh(pv.Sphere(radius=1, center=[contact.x, contact.y, contact.z]), color="darkorange", smooth_shading=True)
-    
+
 plotter.background_color = "white"
 _ = plotter.add_axes(line_width=5, labels_off=True)
 plotter.view_xy()

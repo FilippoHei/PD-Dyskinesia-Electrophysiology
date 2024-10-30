@@ -101,3 +101,77 @@ def interpolate_2d_array(array_2d, target_length, fs):
     interpolated_array = np.array(interpolated_array)
     
     return interpolated_array
+
+def create_spatial_data_for_PSD_features(df_PSD, MNI_coordinates, data_type, feature):
+    
+    df_feature               = []
+    
+    for severity in df_PSD.keys():
+
+        if(data_type=="lfp"):
+            dynamic               = df_PSD[severity][["patient","LFP_hemisphere","LFP_channel",feature]]
+            dynamic["hemisphere"] = dynamic.LFP_hemisphere
+            dynamic["channel"]    = dynamic.LFP_channel
+            dynamic["feature"]    = feature
+            dynamic["value"]      = dynamic[feature]
+            dynamic               = dynamic[["patient","hemisphere","channel","feature"]]
+            dynamic               = pd.merge(dynamic, MNI_coordinates, on=['patient', 'hemisphere', 'channel'], how='inner')
+        else:
+            dynamic = df_PSD[severity][["patient","ECoG_hemisphere","ECoG_channel",feature]]
+            dynamic["hemisphere"] = dynamic.ECoG_hemisphere
+            dynamic["channel"]    = dynamic.ECoG_channel
+            dynamic["feature"]    = feature
+            dynamic["value"]      = dynamic[feature]
+            dynamic               = dynamic[["patient","hemisphere","channel","feature","value"]]
+            dynamic               = pd.merge(dynamic, MNI_coordinates, on=['patient', 'hemisphere', 'channel'], how='inner')
+    
+        dynamic               = dynamic[["patient","feature","value","x","y","z","AAL3_cortex"]]
+        dynamic["severity"]   = severity
+    
+        if(len(df_feature)==0):
+            df_feature = dynamic
+        else:
+            df_feature = pd.concat([df_feature, dynamic], ignore_index=True)
+
+    return df_feature
+
+def get_onset_and_offset_aligned_recordings(dataframe, fs):
+    
+    rec_onset_aligned  = []
+    rec_offset_aligned = []
+    
+    for index, row in dataframe.iterrows():
+    
+        recording_onset  = []
+        recording_offset = []
+        
+        if(len(row.event_recording)<fs*2):
+            recording_onset.extend(row.pre_event_recording)
+            recording_onset.extend(row.event_recording)
+            recording_onset.extend(row.post_event_recording[0:fs*2 - len(row.event_recording)])
+    
+            recording_offset.extend(row.pre_event_recording[-(fs*2 - len(row.event_recording)):])
+            recording_offset.extend(row.event_recording)
+            recording_offset.extend(row.post_event_recording)
+        else:
+            recording_onset.extend(row.pre_event_recording)
+            recording_onset.extend(row.event_recording[0:fs*2])
+    
+            recording_offset.extend(row.event_recording[-fs*2:]) # get 2 second section from the end of event 
+            recording_offset.extend(row.post_event_recording)
+
+        # if there are missing segments (due to the artifact removal), dont put that event to the dataframe
+        if(len(recording_onset)==fs*4):
+            rec_onset_aligned.append(recording_onset)
+        else:
+            rec_onset_aligned.append(np.nan)
+            
+        if(len(recording_offset)==fs*4):
+            rec_offset_aligned.append(recording_offset)
+        else:
+            rec_offset_aligned.append(np.nan)
+
+    dataframe["recording_onset_aligned"]  = rec_onset_aligned
+    dataframe["recording_offset_aligned"] = rec_offset_aligned
+    
+    return dataframe
