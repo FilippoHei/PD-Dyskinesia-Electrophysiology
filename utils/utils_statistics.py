@@ -8,30 +8,31 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.stats.multitest import multipletests
+import scipy.stats as stats
 
-def set_up_mixedlm_with_interaction(dataset, response_variable, independed_variable, block_variable, random_effect, random_intercept, random_slope, REML_state):
+def set_up_mixedlm_with_interaction(dataset, response_variable, independent_variable, block_variable, random_effect, random_intercept, random_slope, REML_state):
     if((random_intercept==True) & (random_slope==False)):
-        model = smf.mixedlm(f"" +response_variable + " ~ " + independed_variable + " * " +  block_variable, dataset, 
+        model = smf.mixedlm(f"" +response_variable + " ~ " + independent_variable + " * " +  block_variable, dataset, 
                             groups=dataset[random_effect], re_formula="~1").fit(reml=REML_state)
     elif((random_intercept==True) & (random_slope==True)):
-        model = smf.mixedlm(f"" +response_variable + "~ " + independed_variable + " * " +  block_variable, dataset, 
-                            groups=dataset[random_effect], re_formula="~1+"+independed_variable).fit(reml=REML_state)
+        model = smf.mixedlm(f"" +response_variable +  "~ " + independent_variable + " * " +  block_variable, dataset, 
+                            groups=dataset[random_effect], re_formula="~1+"+independent_variable).fit(reml=REML_state)
     return model
     
-def run_LMM_model_with_interaction(dataset, response_variables, independed_variable, block_variable, 
+def run_LMM_model_with_interaction(dataset, response_variables, independent_variable, block_variable, 
                                    random_effect, random_intercept, random_slope):
 
-    groups   = sorted(dataset[independed_variable].unique()) 
+    groups   = sorted(dataset[independent_variable].unique()) 
     segments = sorted(dataset[block_variable].unique()) 
     
     print("Linear Mixed Effect Model with Interaction Started")
     print("------------------------------------------------------------------")
-    print("--> independent variable : " + str(independed_variable) + " [" +  ", ".join(groups) + "] ")
+    print("--> independent variable : " + str(independent_variable) + " [" +  ", ".join(groups) + "] ")
     print("--> block variable       : " + str(block_variable) + " [" +  ", ".join(segments) + "] ")
-    print("--> interaction          : " + str(independed_variable) + " * " + str(str(block_variable)))
+    print("--> interaction          : " + str(independent_variable) + " * " + str(str(block_variable)))
     print("--> random effect        : " + str(random_effect))
     print("--> random intercept     : " + str(random_intercept))
-    print("--> random slope         : " + str(random_intercept))
+    print("--> random slope         : " + str(random_slope))
     print("------------------------------------------------------------------")
     
     reference_severity = groups[0]
@@ -42,7 +43,7 @@ def run_LMM_model_with_interaction(dataset, response_variables, independed_varia
     for feature in response_variables:
         print("--> response variable    : " + feature)
         model = set_up_mixedlm_with_interaction(dataset=dataset, response_variable=feature, 
-                                                independed_variable=independed_variable, block_variable=block_variable, random_effect=random_effect, 
+                                                independent_variable=independent_variable, block_variable=block_variable, random_effect=random_effect, 
                                                 random_intercept=random_intercept, random_slope=random_slope, REML_state=True)
         
         df            = pd.DataFrame(model.pvalues).reset_index()
@@ -69,37 +70,48 @@ def run_LMM_model_with_interaction(dataset, response_variables, independed_varia
     return results
     
 
-def set_up_mixedlm(dataset, response_variable, independed_variable, random_effect, random_intercept, random_slope, REML_state):
-    if((random_intercept==True) & (random_slope==False)):
-        model = smf.mixedlm(f"" +response_variable + "~ " + independed_variable, dataset, 
-                            groups=dataset[random_effect], re_formula="~1").fit(reml=REML_state)
-    elif((random_intercept==True) & (random_slope==True)):
-        model = smf.mixedlm(f"" +response_variable + "~ " + independed_variable, dataset, 
-                            groups=dataset[random_effect], re_formula="~1+"+independed_variable).fit(reml=REML_state)
+def set_up_mixedlm(dataset, response_variable, independent_variable, random_effect, random_intercept, random_slope, constant_variance, REML_state):
+    
+    formula              = f"{response_variable} ~ C({independent_variable})"
+
+    if(random_intercept and not random_slope):
+        re_formula = "~1"
+    elif(random_intercept and random_slope):
+        re_formula = f"~1 + C({independent_variable})"
+
+    if(constant_variance):
+        model = smf.mixedlm(formula, dataset, groups=dataset[random_effect], re_formula=re_formula).fit(reml=True)
+    else:
+        vc_formula = {random_effect: f"0 + C({independent_variable})"}
+        vc_formula = {random_effect: f"1 + C({independent_variable})"}
+        vc_formula = {random_effect: f"1"}
+        model = smf.mixedlm(formula, dataset, groups=dataset[random_effect], re_formula=re_formula, vc_formula=vc_formula).fit(reml=True)
+        
     return model
 
-def run_LMM_model(dataset, response_variables, independed_variable, random_effect, random_intercept, random_slope, correction_method):
+def run_LMM_model(dataset, response_variables, independent_variable, random_effect, random_intercept, constant_variance, random_slope):
 
     df_LMM_results         = pd.DataFrame(columns=["feature", "group_1", "group_2", "coefficient", "model", "converged", "p_value"]) 
-    groups                 = sorted(dataset[independed_variable].unique())                      # the distinct group categories
-    reference_group        = sorted(dataset[independed_variable].unique())[0]                   # the reference group based on alphabetical order
-    no_of_remaining_groups = len(dataset[independed_variable].unique()) - 1                     # the number of groups that can be compared with the reference group
+    groups                 = sorted(dataset[independent_variable].unique())                      # the distinct group categories
+    reference_group        = sorted(dataset[independent_variable].unique())[0]                   # the reference group based on alphabetical order
+    no_of_remaining_groups = len(dataset[independent_variable].unique()) - 1                     # the number of groups that can be compared with the reference group
     
     print("Linear Mixed Effect Model Started")
     print("------------------------------------------------------------------")
-    print("--> independent variable : " + str(independed_variable))
+    print("--> independent variable : " + str(independent_variable))
     print("--> groups               : " + ", ".join(groups))
     print("--> random effect        : " + str(random_effect))
     print("--> random intercept     : " + str(random_intercept))
-    print("--> random slope         : " + str(random_intercept))
+    print("--> random slope         : " + str(random_slope))
     print("------------------------------------------------------------------")
     
     for feature in response_variables:
     
         print("--> response variable    : " + feature)
         
-        model   = set_up_mixedlm(dataset=dataset, response_variable=feature, independed_variable=independed_variable, 
-                                                  random_effect=random_effect, random_intercept=random_intercept, random_slope=random_slope, REML_state=True)
+        model   = set_up_mixedlm(dataset=dataset, response_variable=feature, independent_variable=independent_variable, 
+                                 random_effect=random_effect, random_intercept=random_intercept, random_slope=random_slope, 
+                                 constant_variance=constant_variance, REML_state=True)
         pvalues = model.pvalues # get uncorrected p-values from the LMM model
         coeffs  = model.params  # get coefficients from the LMM model
         
@@ -120,13 +132,13 @@ def run_LMM_model(dataset, response_variables, independed_variable, random_effec
                 
                 # singularity refers to a case where one or more variables in the dataset are perfectly correlated with others. 
                 # This results in a design matrix that is not invertible, which can lead to errors when fitting linear mixed effect models.
-                singularity_issue = check_singularity_issue(dataset=dataset, independed_variable=independed_variable, 
+                singularity_issue = check_singularity_issue(dataset=dataset, independent_variable=independent_variable, 
                                                             response_variable=feature, drop_first=False)
     
                 # Variance Inflation Factor (VIF) is used to detect multicollinearity in our LMM model by quantifying how much the variance of 
                 # a regression coefficient is inflated due to multicollinearity among the predictors/independent variables. 
                 # When all groups are included, their sum sometimes can be perfectly correlated with the intercept (or constant), leading to an "infinitely large" VIF.
-                vif_scores = measure_variance_inflation_factor(dataset=dataset, independed_variable="grouping_2", 
+                vif_scores = measure_variance_inflation_factor(dataset=dataset, independent_variable="grouping_2", 
                                                                response_variable="post_event_gamma_mean", drop_first=False)
                 if(singularity_issue==True):
                     print("        -> warning: some eigenvalues close to zero, indicating a potential singularity issue in covariance matrix.")
@@ -136,8 +148,9 @@ def run_LMM_model(dataset, response_variables, independed_variable, random_effec
                 print("        -> switching from REML to ML Estimation")
 
                 # try again with fitting LMM with Maximum likelihood estimation instead of Restricted Maximum Likelihood Estimation
-                model   = set_up_mixedlm(dataset=dataset, response_variable=feature, independed_variable=independed_variable, 
-                                         random_effect=random_effect, random_intercept=random_intercept, random_slope=random_slope, REML_state=False)
+                model   = set_up_mixedlm(dataset=dataset, response_variable=feature, independent_variable=independent_variable, 
+                                         random_effect=random_effect, random_intercept=random_intercept, random_slope=random_slope, 
+                                         constant_variance=constant_variance, REML_state=False)
                 pvalues = model.pvalues # get uncorrected p-values from the LMM model
                 coeffs  = model.params  # get coefficients from the LMM model
                 row["coefficient"] = coeffs[group_i+1]
@@ -158,8 +171,6 @@ def run_LMM_model(dataset, response_variables, independed_variable, random_effec
     print("------------------------------------------------------------------")
     print("------------------------------------------------------------------")
     
-    # apply multiple comparison correction
-    df_LMM_results["p_value_corrected"] = multipletests(df_LMM_results.p_value, alpha=0.05, method=correction_method)[1]   
     return df_LMM_results
 
 def apply_multiple_correction(p_values, correction_method):
@@ -173,10 +184,10 @@ def interpret_vif(vif):
     else:
         return 'high'
         
-def measure_variance_inflation_factor(dataset, independed_variable, response_variable, drop_first):
+def measure_variance_inflation_factor(dataset, independent_variable, response_variable, drop_first):
 
     # convert the random effect column to dummy variables (one-hot encoding)
-    df_encoded = pd.get_dummies(dataset[[independed_variable,response_variable]], columns=[independed_variable], drop_first=drop_first)
+    df_encoded = pd.get_dummies(dataset[[independent_variable,response_variable]], columns=[independent_variable], drop_first=drop_first)
     
     # define the independent variables (the one-hot encoded columns) and the dependent variable
     X = df_encoded.drop(columns=[response_variable]).astype(int)
@@ -194,10 +205,10 @@ def measure_variance_inflation_factor(dataset, independed_variable, response_var
     return vif_data
 
 
-def check_singularity_issue(dataset, independed_variable, response_variable, drop_first):
+def check_singularity_issue(dataset, independent_variable, response_variable, drop_first):
 
     # convert the random effect column to dummy variables (one-hot encoding)
-    df_encoded = pd.get_dummies(dataset[[independed_variable,response_variable]], columns=[independed_variable], drop_first=drop_first)
+    df_encoded = pd.get_dummies(dataset[[independent_variable,response_variable]], columns=[independent_variable], drop_first=drop_first)
     
     # define the independent variables (the one-hot encoded columns) and the dependent variable
     X = df_encoded.drop(columns=[response_variable]).astype(int)
@@ -216,3 +227,139 @@ def check_singularity_issue(dataset, independed_variable, response_variable, dro
         return True
     else:
         return False
+
+############################################################################################
+############################################################################################
+# REGRESSION MODELS ########################################################################
+############################################################################################
+############################################################################################
+
+def train_OLS(dataset, predictors, target):
+    X       = dataset[predictors].values
+    y       = dataset[target].values 
+    X       = sm.add_constant(X)
+    model   = sm.OLS(y, X).fit()
+    return model.rsquared_adj
+    
+def measure_adjusted_r2_in_grid_bins_along_axis(dataset, predictors, n_bins, axis):
+
+    if(axis=="x"):
+        grid_feature = "grid_bin_x"
+    elif(axis=="y"):
+        grid_feature = "grid_bin_y"
+    elif(axis=="z"):
+        grid_feature = "grid_bin_z"
+    
+    df_R_square = pd.DataFrame(columns=["axis", "grid_bin","adjusted_r2"])
+    
+    for bin in range(n_bins):
+        
+        dataset_bin     = dataset[dataset[grid_feature]==bin]
+        row             = {}
+        row["axis"]     = axis
+        row["grid_bin"] = bin
+        
+        if(len(dataset_bin)>0):
+            adjusted_r2        = train_OLS(dataset_bin, predictors, target="severity_numeric")
+            row["adjusted_r2"] = adjusted_r2
+        else:
+            row["adjusted_r2"] = 0
+    
+        df_R_square.loc[len(df_R_square)]  = row
+
+    return df_R_square
+
+def measure_adjusted_r2_in_grid_cells_for_frequency_bands(dataset, n_bins, frequency_band, target_feature):
+    if(frequency_band=="theta"):
+        predictors = ['pre_event_theta_mean', 'event_theta_mean', 'post_event_theta_mean']
+    elif(frequency_band=="beta_low"):
+        predictors = ['pre_event_beta_low_mean', 'event_beta_low_mean', 'post_event_beta_low_mean']
+    elif(frequency_band=="beta_high"):
+        predictors = ['pre_event_beta_high_mean', 'event_beta_high_mean', 'post_event_beta_high_mean']
+    elif(frequency_band=="gamma"):
+        predictors = ['pre_event_gamma_mean', 'event_gamma_mean', 'post_event_gamma_mean']
+        
+    df_cell_R_square = pd.DataFrame(columns=["frequency_band","grid_bin_x","grid_bin_y","grid_bin_z","adjusted_r2"])
+    
+    for x in range(n_bins):
+        for y in range(n_bins):
+            for z in range(n_bins):
+    
+                cell_dynamics = dataset[(dataset.grid_bin_x==x) & (dataset.grid_bin_y==y) & (dataset.grid_bin_z ==z)]
+                
+                if(len(cell_dynamics)!=0): # if we have contacts in the selected grid cell (x,y,z, axes combined)
+                    
+                    cell_adjusted_r2      = train_OLS(cell_dynamics, predictors, target=target_feature)
+                    cell_adjusted_r2      = max(cell_adjusted_r2, 0) # <0, than make it 0
+                        
+                    row                   = {}
+                    row["frequency_band"] = frequency_band
+                    row["grid_bin_x"]     = x
+                    row["grid_bin_y"]     = y
+                    row["grid_bin_z"]     = z
+                    row["adjusted_r2"]    = cell_adjusted_r2
+                    df_cell_R_square.loc[len(df_cell_R_square)] = row
+
+    return df_cell_R_square
+            
+
+
+############################################################################################
+############################################################################################
+# PCA MODEL ################################################################################
+############################################################################################
+############################################################################################
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.metrics import calinski_harabasz_score
+
+def build_PCA_model(dataframe, features, label, n_components=5):
+
+    X                    = dataframe[features]
+    X_scaled             = StandardScaler().fit_transform(X)
+    X                    = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
+    Y                    = dataframe[label]
+
+    # apply PCA
+    pca                  = PCA(n_components=n_components)
+    principal_components = pca.fit_transform(X)
+
+    data_pca = pd.DataFrame()
+    for i in range(n_components):
+        data_pca["PC"+str(i+1)] = principal_components[:,i]
+    data_pca["severity"] = dataframe[label].to_list()
+
+    # get feature contributions and total explained variance for each principal axis
+    feature_contributions           = pca.components_.T * np.sqrt(pca.explained_variance_)
+    explained_variance              = pd.DataFrame()
+    explained_variance["component"] = data_pca.columns[0:-1].tolist()
+    explained_variance["score"]     = np.transpose(pca.explained_variance_ratio_)
+
+    pca_contributions = pd.DataFrame(feature_contributions, columns=data_pca.columns[0:-1].tolist(), index=X.columns).abs()
+
+    return data_pca, explained_variance, pca_contributions
+
+
+def ch_score(dataset_pca, group_label, group_mapping):
+
+    pca_features      = list(set(dataset_pca.columns).difference(set([group_label])))
+    X                 = dataset_pca[pca_features]
+    Y                 = dataset_pca[group_label]
+    
+    groups            = list(group_mapping.keys())
+    calinski_harabasz = np.zeros([len(groups), len(groups)])
+    
+    for i in range(len(groups)):
+        for j in range(len(groups)):
+            group1 = groups[i]
+            group2 = groups[j]
+            if(i!=j):
+                X_temp = X[(Y==group1) | (Y==group2)].values
+                labels = Y[(Y==group1) | (Y==group2)].map(group_mapping)
+                calinski_harabasz[i][j] = calinski_harabasz_score(X_temp, labels)
+            else:
+                calinski_harabasz[i][j] = 0
+    calinski_harabasz = pd.DataFrame(data=calinski_harabasz, columns=groups, index=groups)
+    
+    return calinski_harabasz

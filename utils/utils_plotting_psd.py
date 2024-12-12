@@ -59,7 +59,7 @@ def plot_adjusted_psd(freq, psd_mean, psd_error, color, axis):
     # Apply the custom transformation to the x-axis
     axis.xaxis.set_major_formatter(FuncFormatter(lambda x, _: inverse_transform(x)))
 
-def plot_power_spectra_panel(freq, psd_array, error_type, color, axis):
+def plot_power_spectra_panel(freq, psd_array, vmin, vmax, error_type, color, axis):
 
     # get mean of the psd
     psd_mean = np.nanmean(psd_array, axis=0)
@@ -73,10 +73,8 @@ def plot_power_spectra_panel(freq, psd_array, error_type, color, axis):
     if(len(freq)!=0):
         plot_adjusted_psd(freq, psd_mean=psd_mean, psd_error=psd_error, color=color, axis=axis)
         utils_plotting.set_axis(axis)
-        axis.set_ylim([-50,100])
-        axis.set_yticks([-50, -25, 0, 25, 50, 75, 100])
-        axis.set_ylim([-50,150])
-        axis.set_yticks([-50, -25, 0, 25, 50, 75, 100, 125,150])
+        axis.set_ylim([vmin,vmax])
+        axis.set_yticks(np.linspace(vmin, vmax, int((vmax-vmin+25)/25)))
         #######################################################################################
         #######################################################################################
         axis.set_xlim([-4,custom_transform(90)])
@@ -86,7 +84,7 @@ def plot_power_spectra_panel(freq, psd_array, error_type, color, axis):
         
     return axis
 
-def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, segment="event", error_type="se", figure_name=""):
+def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, vmin, vmax, segment="event", error_type="se", figure_name=""):
 
     if(segment=="event"):
         psd_feature = "event_psd"
@@ -105,12 +103,12 @@ def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, segment="event", error_typ
     ax              = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
     
     try:
-        plot_power_spectra_panel(freq, psd_LID_array, error_type=error_type, color=utils_plotting.colors["voluntary"]["severe"], axis=ax)
+        plot_power_spectra_panel(freq, psd_LID_array, vmin, vmax, error_type=error_type, color=utils_plotting.colors["voluntary"]["severe"], axis=ax)
     except:
         pass
 
     try:
-        plot_power_spectra_panel(freq, psd_noLID_array, error_type=error_type, color=utils_plotting.colors["no_LID"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_array, vmin, vmax, error_type=error_type, color=utils_plotting.colors["no_LID"], axis=ax)
     except:
         pass
     
@@ -122,7 +120,7 @@ def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, segment="event", error_typ
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
-def plot_LID_severity_psd(dataset, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
+def plot_LID_severity_psd(dataset, vmin, vmax, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
 
     if(segment=="event"):
         psd_segment = "event_psd"
@@ -141,22 +139,22 @@ def plot_LID_severity_psd(dataset, segment="event", dyskinesia_strategy="dyskine
 
     # plot
     plt              = utils_plotting.get_figure_template()
-    ax               = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
+    ax               = plt.subplot2grid((77, 66), (0, 0) , colspan=25, rowspan=15)
 
     try:
-        plot_power_spectra_panel(freq, psd_noLID_noDOPA, error_type=error_type, color=utils_plotting.colors["no_LID_no_DOPA"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_noDOPA, vmin, vmax, error_type=error_type, color=utils_plotting.colors["no_LID_no_DOPA"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_noLID_DOPA, error_type=error_type, color=utils_plotting.colors["no_LID_DOPA"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_DOPA, vmin, vmax, error_type=error_type, color=utils_plotting.colors["no_LID_DOPA"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_LID_mild, error_type=error_type, color=utils_plotting.colors["tapping"]["mild"], axis=ax)
+        plot_power_spectra_panel(freq, psd_LID_mild, vmin, vmax, error_type=error_type, color=utils_plotting.colors["tapping"]["mild"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_LID_moderate, error_type=error_type, color=utils_plotting.colors["tapping"]["moderate"], axis=ax)
+        plot_power_spectra_panel(freq, psd_LID_moderate, vmin, vmax, error_type=error_type, color=utils_plotting.colors["tapping"]["moderate"], axis=ax)
     except:
         pass
         
@@ -168,31 +166,3 @@ def plot_LID_severity_psd(dataset, segment="event", dyskinesia_strategy="dyskine
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
-def plot_noLID_states_psd(dataset_noLID, segment="event", error_type="se", figure_name=""):
-
-    if(segment=="event"):
-        psd_feature = "event_psd"
-    elif(segment=="pre_event"):
-        psd_feature = "pre_event_psd"
-    else:
-        psd_feature = "post_event_psd"
-
-    # get the PSD array of selected event segment
-    psd_noLID_noDOPA_array = dataset_noLID[dataset_noLID["event_start_time"]<=30][psd_feature].to_list()
-    psd_noLID_DOPA_array = dataset_noLID[dataset_noLID["event_start_time"]>30][psd_feature].to_list()
-    freq                     = np.linspace(4,100,97) # fixed
-
-    # plot
-    plt             = utils_plotting.get_figure_template()
-    ax              = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
-    
-    plot_power_spectra_panel(freq, psd_noLID_noDOPA_array, error_type=error_type, color=utils_plotting.colors["no_LID_no_DOPA"], axis=ax)
-    plot_power_spectra_panel(freq, psd_noLID_DOPA_array, error_type=error_type, color=utils_plotting.colors["no_LID_DOPA"], axis=ax)
-    
-    ax.set_title(segment, fontsize=utils_plotting.LABEL_SIZE_label)
-
-    save_path = os.path.dirname(figure_name + ".png")
-    os.makedirs(save_path, exist_ok=True) # Create directories if they don't exist
-    
-    plt.savefig(figure_name + ".png", dpi=300)
-    plt.savefig(figure_name + ".svg", dpi=300)

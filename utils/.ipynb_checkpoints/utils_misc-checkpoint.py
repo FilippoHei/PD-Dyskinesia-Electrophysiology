@@ -175,3 +175,12 @@ def get_onset_and_offset_aligned_recordings(dataframe, fs):
     dataframe["recording_offset_aligned"] = rec_offset_aligned
     
     return dataframe
+
+def spectrogram_downsampling_with_mean(spectrogram, fs, time_interval_in_second):
+    sample_interval   = 1 / fs  # in seconds)
+    downsample_factor = int(time_interval_in_second/sample_interval)
+    
+    # Reshape the matrix: split the time axis into groups of 20 and take the mean along the new axis
+    downsampled_spectrogram = spectrogram[:, :spectrogram.shape[1] // downsample_factor * downsample_factor].reshape(
+        spectrogram.shape[0], -1, downsample_factor).mean(axis=2)
+    return downsampled_spectrogram
