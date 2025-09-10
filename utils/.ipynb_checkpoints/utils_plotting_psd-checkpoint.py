@@ -37,18 +37,18 @@ def inverse_transform(x):
     else:
         return 60 + (x - 40)  # Shifting the right part back
 
-def plot_adjusted_psd(freq, psd_mean, psd_error, color, axis):
+def plot_adjusted_psd(freq, psd_avg, psd_error, color, axis):
     
     # Plot the data using the custom transformation
     freq_transformed = [custom_transform(xi) for xi in freq]
     
-    axis.plot(freq_transformed, psd_mean, label='mean', c=color, linewidth=1)
+    axis.plot(freq_transformed, psd_avg, label='mean', c=color, linewidth=1)
     #######################################################################################
     #######################################################################################
     axis.axvspan(custom_transform(35), custom_transform(60), color='white', zorder=100) 
     #######################################################################################
     #######################################################################################
-    axis.fill_between(freq_transformed, psd_mean - psd_error, psd_mean + psd_error, alpha=0.2, color=color)
+    axis.fill_between(freq_transformed, psd_avg - psd_error, psd_avg + psd_error, alpha=0.2, color=color)
     
     
     # Set the custom ticks and labels
@@ -59,10 +59,13 @@ def plot_adjusted_psd(freq, psd_mean, psd_error, color, axis):
     # Apply the custom transformation to the x-axis
     axis.xaxis.set_major_formatter(FuncFormatter(lambda x, _: inverse_transform(x)))
 
-def plot_power_spectra_panel(freq, psd_array, vmin, vmax, error_type, color, axis):
+def plot_power_spectra_panel(freq, psd_array, averaging, vmin, vmax, error_type, color, axis):
 
-    # get mean of the psd
-    psd_mean = np.nanmean(psd_array, axis=0)
+    # get average of the psd
+    if(averaging=="mean"):
+        psd_avg = np.nanmean(psd_array, axis=0)
+    else:
+        psd_avg = np.nanmedian(psd_array, axis=0)
     
     # based on the selected error bar, find either the standard deviation or standard error around the average PSD for each frequency
     if(error_type=="sd"):
@@ -71,7 +74,7 @@ def plot_power_spectra_panel(freq, psd_array, vmin, vmax, error_type, color, axi
         psd_error       = 2 * (np.nanstd(psd_array, axis=0) / np.sqrt(len(psd_array)))
     
     if(len(freq)!=0):
-        plot_adjusted_psd(freq, psd_mean=psd_mean, psd_error=psd_error, color=color, axis=axis)
+        plot_adjusted_psd(freq, psd_avg=psd_avg, psd_error=psd_error, color=color, axis=axis)
         utils_plotting.set_axis(axis)
         axis.set_ylim([vmin,vmax])
         axis.set_yticks(np.linspace(vmin, vmax, int((vmax-vmin+25)/25)))
@@ -84,43 +87,7 @@ def plot_power_spectra_panel(freq, psd_array, vmin, vmax, error_type, color, axi
         
     return axis
 
-def plot_LID_vs_noLID_psd(dataset_LID, dataset_noLID, vmin, vmax, segment="event", error_type="se", figure_name=""):
-
-    if(segment=="event"):
-        psd_feature = "event_psd"
-    elif(segment=="pre_event"):
-        psd_feature = "pre_event_psd"
-    else:
-        psd_feature = "post_event_psd"
-
-    # get the PSD array of selected event segment
-    psd_LID_array   = dataset_LID[psd_feature].to_list()
-    psd_noLID_array = dataset_noLID[psd_feature].to_list()
-    freq            = np.linspace(4,100,97) # fixed
-
-    # plot
-    plt             = utils_plotting.get_figure_template()
-    ax              = plt.subplot2grid((77, 66), (0, 0) , colspan=20, rowspan=15)
-    
-    try:
-        plot_power_spectra_panel(freq, psd_LID_array, vmin, vmax, error_type=error_type, color=utils_plotting.colors["voluntary"]["severe"], axis=ax)
-    except:
-        pass
-
-    try:
-        plot_power_spectra_panel(freq, psd_noLID_array, vmin, vmax, error_type=error_type, color=utils_plotting.colors["no_LID"], axis=ax)
-    except:
-        pass
-    
-    ax.set_title(segment, fontsize=utils_plotting.LABEL_SIZE_label)
-    
-    save_path = os.path.dirname(figure_name + ".png")
-    os.makedirs(save_path, exist_ok=True) # Create directories if they don't exist
-    
-    plt.savefig(figure_name + ".png", dpi=300)
-    plt.savefig(figure_name + ".svg", dpi=300)
-
-def plot_LID_severity_psd(dataset, vmin, vmax, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
+def plot_LID_severity_psd(dataset, averaging, vmin, vmax, segment="event", dyskinesia_strategy="dyskinesia_arm", error_type="se", figure_name=""):
 
     if(segment=="event"):
         psd_segment = "event_psd"
@@ -132,8 +99,7 @@ def plot_LID_severity_psd(dataset, vmin, vmax, segment="event", dyskinesia_strat
     # get the PSD array of selected event segment
     psd_noLID_noDOPA = dataset["noLID_noDOPA"][psd_segment].to_list()
     psd_noLID_DOPA   = dataset["noLID_DOPA"][psd_segment].to_list()
-    psd_LID_mild     = dataset["mild"][psd_segment].to_list()
-    psd_LID_moderate = dataset["moderate"][psd_segment].to_list()
+    psd_LID          = dataset["LID"][psd_segment].to_list()
     
     freq             = np.linspace(4,100,97) # fixed
 
@@ -142,21 +108,21 @@ def plot_LID_severity_psd(dataset, vmin, vmax, segment="event", dyskinesia_strat
     ax               = plt.subplot2grid((77, 66), (0, 0) , colspan=25, rowspan=15)
 
     try:
-        plot_power_spectra_panel(freq, psd_noLID_noDOPA, vmin, vmax, error_type=error_type, color=utils_plotting.colors["no_LID_no_DOPA"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_noDOPA, averaging, vmin, vmax, error_type=error_type,
+                                 color=utils_plotting.colors["noLID_noDOPA"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_noLID_DOPA, vmin, vmax, error_type=error_type, color=utils_plotting.colors["no_LID_DOPA"], axis=ax)
+        plot_power_spectra_panel(freq, psd_noLID_DOPA, averaging, vmin, vmax, error_type=error_type,
+                                 color=utils_plotting.colors["noLID_DOPA"], axis=ax)
     except:
         pass
     try:
-        plot_power_spectra_panel(freq, psd_LID_mild, vmin, vmax, error_type=error_type, color=utils_plotting.colors["tapping"]["mild"], axis=ax)
+        plot_power_spectra_panel(freq, psd_LID, averaging, vmin, vmax, error_type=error_type, 
+                                 color=utils_plotting.colors["LID"], axis=ax)
     except:
         pass
-    try:
-        plot_power_spectra_panel(freq, psd_LID_moderate, vmin, vmax, error_type=error_type, color=utils_plotting.colors["tapping"]["moderate"], axis=ax)
-    except:
-        pass
+    
         
     ax.set_title(segment, fontsize=utils_plotting.LABEL_SIZE_label)
 
@@ -165,4 +131,3 @@ def plot_LID_severity_psd(dataset, vmin, vmax, segment="event", dyskinesia_strat
     
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
-

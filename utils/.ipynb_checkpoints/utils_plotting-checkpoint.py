@@ -17,22 +17,22 @@ LABEL_SIZE_label = 6
 LABEL_SIZE_title = 7 
 
 # color dataframe
-colors                            = {}
+colors                 = {}
 
-colors["task_tapping"]            = "#d6573a"
-colors["task_rest"]               = "#73a4a8"
-colors["task_free"]               = "#646198"
+colors["task_tapping"] = "#d6573a"
+colors["task_rest"]    = "#73a4a8"
+colors["task_free"]    = "#646198"
 
-colors["tapping"]                 = {}
-colors["tapping"]["none"]         = "#93B93C"
-colors["tapping"]["mild"]         = "#EF8A06"
-colors["tapping"]["moderate"]     = "#DC2F02"
-colors["tapping"]["severe"]       = "#9D0208"
-colors["tapping"]["extreme"]      = "#370617"
+colors["noLID_noDOPA"] = "#bcbcbcff"
+colors["noLID_DOPA"]   = "#84a98cff"
+colors["LID"]          = "#f27f34ff"
 
-colors["no_LID"]                  = "#93B93C"
-colors["no_LID_no_DOPA"]          = "#386641"
-colors["no_LID_DOPA"]             = "#A7C957"
+colors["theta"]        = "#ea698bff"
+colors["alpha"]        = "#b458c6ff"
+colors["beta_low"]     = "#4ec1dfff"
+colors["beta_high"]    = "#1a659eff"
+colors["gamma"]        = "#ff0a54ff"
+
 
 def get_figure_template():
     
@@ -240,14 +240,11 @@ def plot_coefficient_heatmap(df, features, alpha, ax):
     # Pivot the DataFrame for the heatmap and significance mask
     heatmap_data = df.pivot(index='feature', columns='group_combination', values='coefficient')
     heatmap_data = heatmap_data.reindex(index=features)
-    heatmap_data = heatmap_data[['noLID_noDOPA vs noLID_DOPA', 'noLID_noDOPA vs mild', 'noLID_noDOPA vs moderate', 
-                                  'noLID_DOPA vs mild', 'noLID_DOPA vs moderate', 'mild vs moderate']]
+    heatmap_data = heatmap_data[['noLID_noDOPA vs noLID_DOPA', 'noLID_noDOPA vs LID', 'noLID_DOPA vs LID']]
     
     heatmap_significance = df.pivot(index='feature', columns='group_combination', values='significant')
     heatmap_significance = heatmap_significance.reindex(index=features)
-    heatmap_significance = heatmap_significance[['noLID_noDOPA vs noLID_DOPA', 'noLID_noDOPA vs mild', 
-                                                 'noLID_noDOPA vs moderate', 'noLID_DOPA vs mild', 
-                                                 'noLID_DOPA vs moderate', 'mild vs moderate']]
+    heatmap_significance = heatmap_significance[['noLID_noDOPA vs noLID_DOPA', 'noLID_noDOPA vs LID', 'noLID_DOPA vs LID']]
     
     # Plot heatmap with color mask applied
     sns.heatmap(heatmap_data, annot=False, cmap="coolwarm", cbar_kws={'label': 'Coefficient'},
@@ -267,7 +264,7 @@ def plot_coefficient_heatmap(df, features, alpha, ax):
     
     # Set x-axis ticks
     ax.set_xticks(ticks=[0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
-    ax.set_xticklabels(['noLID-DOPA', 'mild', 'moderate', 'mild', 'moderate', 'moderate'], rotation=0, fontsize=LABEL_SIZE)
+    ax.set_xticklabels(['noLID-DOPA', 'LID', 'LID'], rotation=0, fontsize=LABEL_SIZE)
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=LABEL_SIZE)
     
     # Create a twin axis for the top ticks

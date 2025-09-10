@@ -70,38 +70,45 @@ def extract_baseline_coherence_between_ECOG_LFP_channels():
                         # f, Cxy = measure_absolute_coherence(ECOG_recording, LFP_recording)
 
                         ##############################################################################################
-                        # get 1 second segments of the baseline recordings and get the average coherence
+                        # get 1-second segments of the baseline recordings and get the average coherence
                         segment_length          = (fs*2)
                         segment_overlap         = segment_length / 2
                         
                         # get the start indices of each segments in baseline recording
                         start_indices           = np.arange(0, len(ECOG_recording) - segment_length + 1, segment_overlap).astype(int)
-                                    
-                        # get baseline segments
-                        ECOG_recording_segments = np.array([ECOG_recording[i:i+segment_length] for i in start_indices])
-                        ECOG_recording_segments = np.array(ECOG_recording_segments).reshape(np.shape(ECOG_recording_segments)[0], 1, np.shape(ECOG_recording_segments)[1])
-                        LFP_recording_segments  = np.array([LFP_recording[i:i+segment_length] for i in start_indices])
-                        LFP_recording_segments  = np.array(LFP_recording_segments).reshape(np.shape(LFP_recording_segments)[0], 1, np.shape(LFP_recording_segments)[1])
 
-                        Cxy_array = []
-                        for i in range(len(ECOG_recording_segments)):
-                            f, Cxy = measure_absolute_coherence(ECOG_recording_segments[i][0], LFP_recording_segments[i][0])
-                            Cxy_array.append(Cxy)
+                        try:
+                            # get baseline segments
+                            ECOG_recording_segments = np.array([ECOG_recording[i:i+segment_length] for i in start_indices])
+                            ECOG_recording_segments = np.array(ECOG_recording_segments).reshape(np.shape(ECOG_recording_segments)[0], 1, np.shape(ECOG_recording_segments)[1])
+                            LFP_recording_segments  = np.array([LFP_recording[i:i+segment_length] for i in start_indices])
+                            LFP_recording_segments  = np.array(LFP_recording_segments).reshape(np.shape(LFP_recording_segments)[0], 1, np.shape(LFP_recording_segments)[1])
+    
+                            Cxy_array = []
+                            for i in range(len(ECOG_recording_segments)):
+                                f, Cxy = measure_absolute_coherence(ECOG_recording_segments[i][0], LFP_recording_segments[i][0])
+                                Cxy_array.append(Cxy)
+                        
 
-                        Cxy = np.nanmean(Cxy_array, axis=0)
-                        ##############################################################################################
+                            Cxy = np.nanmean(Cxy_array, axis=0)
+                            ##############################################################################################
+            
+                            # save to the dataframe
+                            row                    = {}
+                            row["patient"]         = patient
+                            row["ECOG_hemisphere"] = h_ECOG
+                            row["LFP_hemisphere"]  = h_LFP
+                            row["ECOG_channel"]    = c_ECOG
+                            row["LFP_channel"]     = c_LFP
+                            row["coherence"]       = Cxy
+    
+                            if(~all(row["coherence"])): #if coherence array is not completerly np.nan
+                                baseline_ECOG_LFP_coherence.loc[len(baseline_ECOG_LFP_coherence)] = row
+
+                        except:
+                            print(f">>> >>> >>>Issue at {patient} -  [ECOG {h_ECOG}{c_ECOG} & LFP {h_LFP}{c_LFP}] channel baseline average coherence estimation!..")
+        print(f">>> Patient {patient} baseline average coherence estimation is completed...")
         
-                        # save to the dataframe
-                        row                    = {}
-                        row["patient"]         = patient
-                        row["ECOG_hemisphere"] = h_ECOG
-                        row["LFP_hemisphere"]  = h_LFP
-                        row["ECOG_channel"]    = c_ECOG
-                        row["LFP_channel"]     = c_LFP
-                        row["coherence"]       = Cxy
-
-                        if(~all(row["coherence"])): #if coherence array is not completerly np.nan
-                            baseline_ECOG_LFP_coherence.loc[len(baseline_ECOG_LFP_coherence)] = row
                         
     return baseline_ECOG_LFP_coherence
 
@@ -112,9 +119,9 @@ def measure_LFP_ECOG_channel_pair_coherence(dataset_LFP, dataset_ECOG, baseline_
     channel_events_ECOG = dataset_ECOG[(dataset_ECOG.patient==patient) & (dataset_ECOG.ECoG_hemisphere==hemisphere_ECOG) & (dataset_ECOG.ECoG_channel==channel_ECOG)]
     
     # update recording column names
-    channel_events_LFP['LFP_pre_event_recording']   = channel_events_LFP['pre_event_recording']
-    channel_events_LFP['LFP_event_recording']       = channel_events_LFP['event_recording']
-    channel_events_LFP['LFP_post_event_recording']  = channel_events_LFP['post_event_recording']
+    channel_events_LFP['LFP_pre_event_recording']    = channel_events_LFP['pre_event_recording']
+    channel_events_LFP['LFP_event_recording']        = channel_events_LFP['event_recording']
+    channel_events_LFP['LFP_post_event_recording']   = channel_events_LFP['post_event_recording']
     channel_events_ECOG['ECOG_pre_event_recording']  = channel_events_ECOG['pre_event_recording']
     channel_events_ECOG['ECOG_event_recording']      = channel_events_ECOG['event_recording']
     channel_events_ECOG['ECOG_post_event_recording'] = channel_events_ECOG['post_event_recording']
@@ -152,10 +159,6 @@ def measure_LFP_ECOG_channel_pair_coherence(dataset_LFP, dataset_ECOG, baseline_
             channel_events_LFP_ECOG.at[index, 'pre_event_coherence'] = np.linspace(4,100,97) * np.nan
 
         try:
-            # event coherence
-            # event_LFP_rec      = utils_misc.interpolate_signal(row.LFP_event_recording, target_duration=2, fs=2)
-            # event_ECOG_rec     = utils_misc.interpolate_signal(row.ECOG_event_recording, target_duration=2, fs=2)
-            # f, event_coherence = measure_absolute_coherence(event_LFP_rec, event_ECOG_rec)
     
             f, event_coherence = measure_absolute_coherence(row.LFP_event_recording, row.ECOG_event_recording)
             event_coherence    = event_coherence * (len(row.LFP_event_recording)/(fs*2)) # scaling of coherence based on event duration by 2 seconds
@@ -220,14 +223,14 @@ def measure_ECOG_LFP_coherence(dataset_LFP, dataset_ECOG, dataset_baseline_LFP_E
         
                             print ("     LFP: " + LFP_h + " hemisphere - " + LFP_c + " | ECOG: " + ECOG_h + " hemisphere - " + ECOG_c)
                             
-                            channel_pair_coherence = measure_LFP_ECOG_channel_pair_coherence(dataset_LFP=dataset_LFP,
-                                                                                             dataset_ECOG=dataset_ECOG,
+                            channel_pair_coherence = measure_LFP_ECOG_channel_pair_coherence(dataset_LFP                =dataset_LFP,
+                                                                                             dataset_ECOG               =dataset_ECOG,
                                                                                              baseline_coherence_LFP_ECOG=dataset_baseline_LFP_ECOG_coherence,
-                                                                                             patient=patient,
-                                                                                             hemisphere_LFP=LFP_h, 
-                                                                                             hemisphere_ECOG=ECOG_h,
-                                                                                             channel_LFP=LFP_c,
-                                                                                             channel_ECOG=ECOG_c)
+                                                                                             patient                    =patient,
+                                                                                             hemisphere_LFP             =LFP_h, 
+                                                                                             hemisphere_ECOG            =ECOG_h,
+                                                                                             channel_LFP                =LFP_c,
+                                                                                             channel_ECOG               =ECOG_c)
         
                             if(len(LFP_ECOG_coherence) == 0):
                                 LFP_ECOG_coherence = channel_pair_coherence
@@ -240,14 +243,14 @@ def measure_ECOG_LFP_coherence(dataset_LFP, dataset_ECOG, dataset_baseline_LFP_E
         
                             print ("     LFP: " + LFP_h + " hemisphere - " + LFP_c + " | ECOG: " + ECOG_h + " hemisphere - " + ECOG_c)
                             
-                            channel_pair_coherence = measure_LFP_ECOG_channel_pair_coherence(dataset_LFP=dataset_LFP,
-                                                                                             dataset_ECOG=dataset_ECOG,
+                            channel_pair_coherence = measure_LFP_ECOG_channel_pair_coherence(dataset_LFP                =dataset_LFP,
+                                                                                             dataset_ECOG               =dataset_ECOG,
                                                                                              baseline_coherence_LFP_ECOG=dataset_baseline_LFP_ECOG_coherence,
-                                                                                             patient=patient,
-                                                                                             hemisphere_LFP=LFP_h, 
-                                                                                             hemisphere_ECOG=ECOG_h,
-                                                                                             channel_LFP=LFP_c,
-                                                                                             channel_ECOG=ECOG_c)
+                                                                                             patient                    =patient,
+                                                                                             hemisphere_LFP             =LFP_h, 
+                                                                                             hemisphere_ECOG            =ECOG_h,
+                                                                                             channel_LFP                =LFP_c,
+                                                                                             channel_ECOG               =ECOG_c)
         
                             if(len(LFP_ECOG_coherence) == 0):
                                 LFP_ECOG_coherence = channel_pair_coherence
@@ -258,4 +261,27 @@ def measure_ECOG_LFP_coherence(dataset_LFP, dataset_ECOG, dataset_baseline_LFP_E
                                              'post_event_coherence', 'LFP_hemisphere', 'LFP_channel', 'ECoG_hemisphere', 'ECoG_channel']]
     
     return LFP_ECOG_coherence
+
+def measure_mean_coherence_by_frequency_band(dataset):
+
+    freq  = np.linspace(4, 100, 97)
+    bands = {"theta"     : np.where((freq >= 4) & (freq <= 8))[0],
+             "alpha"     : np.where((freq >= 8) & (freq <= 12))[0],
+             "beta_low"  : np.where((freq >= 12) & (freq <= 20))[0],
+             "beta_high" : np.where((freq >= 20) & (freq <= 35))[0],
+             "gamma"     : np.where((freq >= 60) & (freq <= 90))[0],
+             "gamma_III" : np.where((freq >= 80) & (freq <= 90))[0]}
+
+    def compute_band_means(row):
+        results = {}
+        for phase in ["pre_event_coherence", "event_coherence", "post_event_coherence"]:
+            values      = np.array(row[phase])
+            phase_short = phase.replace("_coherence", "")  # remove "coherence"
+            for band, idx in bands.items():
+                results[f"{phase_short}_{band}_mean"] = values[idx].mean()
+        return pd.Series(results)
+
+    # Apply and merge results
+    band_means = dataset.apply(compute_band_means, axis=1)
+    return pd.concat([dataset, band_means], axis=1)
 

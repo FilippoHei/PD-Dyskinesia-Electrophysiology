@@ -95,39 +95,24 @@ def plot_accelerometer_events_for_event_category(dataset, event_category, figure
     plt.savefig(figure_name + ".png", dpi=300)
     plt.savefig(figure_name + ".svg", dpi=300)
 
-def plot_accelerometer_events_for_dyskinesia_severity(dataset, event_category, dyskinesia_strategy, figure_name):
+def plot_accelerometer_events_for_dyskinesia_severity(dataset, event_category, feature_severity, dyskinesia_strategy, figure_name):
 
     plt  = utils_plotting.get_figure_template()
     ax1  = plt.subplot2grid((75, 40), (0, 0)  , colspan=19, rowspan=15)
     ax2  = plt.subplot2grid((75, 40), (0, 21) , colspan=19, rowspan=15)
 
-    if(dyskinesia_strategy == "total"):
-        
-        for severity in dataset.dyskinesia_total.unique():
-            dataset_severity        = dataset[(dataset.event_category == event_category) & (dataset.dyskinesia_total == severity)]
-            dataset_severity_onset  = []
-            dataset_severity_offset = []
     
-            for index, row in dataset_severity.iterrows():
-                dataset_severity_onset.append(row["event_onset_aligned"])
-                dataset_severity_offset.append(row["event_offset_aligned"])
-
-            ax1  = plot_accelerometer_events(dataset_severity_onset , axis=ax1, color=utils_plotting.colors[event_category][severity])
-            ax2  = plot_accelerometer_events(dataset_severity_offset, axis=ax2, color=utils_plotting.colors[event_category][severity])
-
-    else:
-        
-        for severity in dataset.dyskinesia_arm.unique():
-            dataset_severity        = dataset[(dataset.event_category == event_category) & (dataset.dyskinesia_arm == severity)]
-            dataset_severity_onset  = []
-            dataset_severity_offset = []
+    for severity in dataset[feature_severity].unique():
+        dataset_severity        = dataset[(dataset.event_category == event_category) & (dataset[feature_severity] == severity)]
+        dataset_severity_onset  = []
+        dataset_severity_offset = []
     
-            for index, row in dataset_severity.iterrows():
-                dataset_severity_onset.append(row["event_onset_aligned"])
-                dataset_severity_offset.append(row["event_offset_aligned"])
+        for index, row in dataset_severity.iterrows():
+            dataset_severity_onset.append(row["event_onset_aligned"])
+            dataset_severity_offset.append(row["event_offset_aligned"])
 
-            ax1  = plot_accelerometer_events(dataset_severity_onset , axis=ax1, color=utils_plotting.colors[event_category][severity])
-            ax2  = plot_accelerometer_events(dataset_severity_offset, axis=ax2, color=utils_plotting.colors[event_category][severity])
+        ax1  = plot_accelerometer_events(dataset_severity_onset , axis=ax1, color=utils_plotting.colors[severity])
+        ax2  = plot_accelerometer_events(dataset_severity_offset, axis=ax2, color=utils_plotting.colors[severity])
 
         
     utils_plotting.set_axis(ax1)

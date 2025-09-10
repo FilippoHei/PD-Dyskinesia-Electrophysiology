@@ -62,8 +62,8 @@ def measure_absolute_psd(recording, fs):
 
 def psd_change_from_baseline_activity(psd_baseline, psd_event):
     
-    psd_baseline = np.array(psd_baseline)
-    psd_event = np.array(psd_event)
+    psd_baseline      = np.array(psd_baseline)
+    psd_event         = np.array(psd_event)
 
     # Calculate the percentage change
     percentage_change = (psd_event - psd_baseline) / psd_baseline * 100
@@ -94,15 +94,15 @@ def extract_normalized_psd_of_events(SUB, patient_dataset, patient_baseline, rec
             channel      = row["ECoG_channel"]
         
         # get baseline recording for selected hemisphere and channel
-        baseline_rec = patient_baseline[SUB][hemisphere][channel]
+        baseline_rec     = patient_baseline[SUB][hemisphere][channel]
         
         # get baseline PSD from baseline recording
-        freq, psd_base  = measure_absolute_psd(baseline_rec, fs=2048)
+        freq, psd_base   = measure_absolute_psd(baseline_rec, fs=2048)
     
         # measure the PSD in pre-event, event and post-event segments
-        freq, psd_pre   = measure_absolute_psd(row["pre_event_recording"], fs=2048)
-        freq, psd_event = measure_absolute_psd(row["event_recording"], fs=2048)
-        freq, psd_post  = measure_absolute_psd(row["post_event_recording"], fs=2048)
+        freq, psd_pre    = measure_absolute_psd(row["pre_event_recording"], fs=2048)
+        freq, psd_event  = measure_absolute_psd(row["event_recording"], fs=2048)
+        freq, psd_post   = measure_absolute_psd(row["post_event_recording"], fs=2048)
     
         # normalized the PSD of three segments based on baseline PSD
         psd_pre_event_norm  = psd_change_from_baseline_activity(psd_base, psd_pre)

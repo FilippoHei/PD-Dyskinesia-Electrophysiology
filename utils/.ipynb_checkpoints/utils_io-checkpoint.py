@@ -56,7 +56,6 @@ def load_LFP_events(event_category, stn_areas, fs):
         # import raw event recordings
         EVENTS                     = pd.read_pickle(DATA_IO.path_events + "LFP_"+event_category+"_EVENTS_"+stn_area+"_AREA.pkl")
         EVENTS                     = LFP.define_onset_aligned_recordings(EVENTS, fs, pad=False)
-        EVENTS                     = EVENTS[EVENTS.patient!="019"]
         
         # get controlateral and ipsilateral events
         EVENTS_CONTROLATERAL       = EVENTS[EVENTS.event_laterality != EVENTS.LFP_hemisphere]
@@ -83,7 +82,6 @@ def load_ECoG_events(event_category, fs):
     # import raw event recordings
     EVENTS                     = pd.read_pickle(DATA_IO.path_events + "ECoG_EVENTS.pkl")
     EVENTS                     = ECoG.define_onset_aligned_recordings(EVENTS, fs, pad=False)
-    EVENTS                     = EVENTS[EVENTS.patient!="019"]
         
     # get controlateral and ipsilateral events
     EVENTS_CONTROLATERAL       = EVENTS[EVENTS.event_laterality != EVENTS.ECoG_hemisphere]
@@ -116,13 +114,11 @@ def load_ECoG_event_PSD(event_category, event_laterality):
         
     event_dictionary["noLID_noDOPA"] = data_noLID[(data_noLID.event_start_time <= 30) & (data_noLID.event_category==event_category)]
     event_dictionary["noLID_DOPA"]   = data_noLID[(data_noLID.event_start_time > 30) & (data_noLID.event_category==event_category)]
-    event_dictionary["mild"]         = data_LID[(data_LID.dyskinesia_arm=="mild") & (data_LID.event_category==event_category)]
-    event_dictionary["moderate"]     = data_LID[(data_LID.dyskinesia_arm=="moderate") & (data_LID.event_category==event_category)]
+    event_dictionary["LID"]          = data_LID[data_LID.event_category==event_category]
 
     event_dictionary["noLID_noDOPA"].reset_index(inplace=True)
     event_dictionary["noLID_DOPA"].reset_index(inplace=True)
-    event_dictionary["mild"].reset_index(inplace=True)
-    event_dictionary["moderate"].reset_index(inplace=True)
+    event_dictionary["LID"].reset_index(inplace=True)
 
     return event_dictionary
 
@@ -133,23 +129,17 @@ def load_LFP_event_PSD(event_category, event_laterality):
     if(event_laterality == "controlateral"):   
         data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/LFP/CONTROLATERAL_MOTOR_noLID.pkl")
         data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/LFP/CONTROLATERAL_MOTOR_LID.pkl")
-        data_noLID = data_noLID[data_noLID.patient!="019"]
-        data_LID   = data_LID[data_LID.patient!="019"]
     else:
         data_noLID = pd.read_pickle(DATA_IO.path_events + "psd/LFP/IPSILATERAL_MOTOR_noLID.pkl")
         data_LID   = pd.read_pickle(DATA_IO.path_events + "psd/LFP/IPSILATERAL_MOTOR_LID.pkl")
-        data_noLID = data_noLID[data_noLID.patient!="019"]
-        data_LID   = data_LID[data_LID.patient!="019"]
         
     event_dictionary["noLID_noDOPA"] = data_noLID[(data_noLID.event_start_time <= 30) & (data_noLID.event_category==event_category)]
     event_dictionary["noLID_DOPA"]   = data_noLID[(data_noLID.event_start_time > 30) & (data_noLID.event_category==event_category)]
-    event_dictionary["mild"]         = data_LID[(data_LID.dyskinesia_arm=="mild") & (data_LID.event_category==event_category)]
-    event_dictionary["moderate"]     = data_LID[(data_LID.dyskinesia_arm=="moderate") & (data_LID.event_category==event_category)]
+    event_dictionary["LID"]          = data_LID[data_LID.event_category==event_category]
 
     event_dictionary["noLID_noDOPA"].reset_index(inplace=True)
     event_dictionary["noLID_DOPA"].reset_index(inplace=True)
-    event_dictionary["mild"].reset_index(inplace=True)
-    event_dictionary["moderate"].reset_index(inplace=True)
+    event_dictionary["LID"].reset_index(inplace=True)
 
     return event_dictionary
 

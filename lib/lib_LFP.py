@@ -57,6 +57,8 @@ class LFP:
         # load contact and/or channel recordings
         # self.__get_contact_recordings()
         self.__get_channel_recordings()
+        #if(SUB == "019"):
+        #    self.correct_recordings()
 
     def __get_contact_recordings(self):
         
@@ -91,7 +93,37 @@ class LFP:
                 self.recordings["left"][channel_pair] = self.__dat_l.data[:,self.__dat_l.colnames.index(l_channel_1)] - self.__dat_l.data[:,self.__dat_l.colnames.index(l_channel_2)]
             except Exception as error:
                 print("... SUB - " + self.__SUB + " : L" +  channel_pair + " channel was not found!")
+
+    def correct_recordings(self):
+
+        from scipy.signal import resample_poly
+        times          = self.times/60
+        times_mask     = times<=83.45
+        times_new      = times[times_mask]
+        times_new      = list(dict.fromkeys(times_new))
+        time_threshold = 79.3
+
+        for hemisphere in self.recordings.keys():
+            for channel in self.recordings[hemisphere].keys():
+                
+                channel_recording     = self.recordings[hemisphere][channel] #orginal recording
+                channel_recording     = channel_recording[times_mask]       #shorten the signal to time<=83.4
+                correction_period     = times[times_mask]<=time_threshold   #section to be downsampled
+                original_period       = times[times_mask]>time_threshold    #section to be kept the same
+                
+                correction_part       = list(channel_recording[correction_period])
+                original_period       = list(channel_recording[original_period])
+                correction_part_down  = list(resample_poly(correction_part, up=2048, down=4096))
+                
+                channel_recording_new = correction_part_down.copy()
+                channel_recording_new.extend(original_period)
         
+                self.recordings[hemisphere][channel] = np.array(channel_recording_new)
+        
+                print(" >> " + hemisphere + " hemisphere - " + channel + " channel is corrected...")
+    
+        self.times = np.array(times_new)*60 # representing as seconds again
+    
     def extract_LFP_events_segments(self, dataset):
         """
         Description

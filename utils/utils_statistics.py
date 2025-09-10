@@ -1,7 +1,7 @@
 """
 Statistic utilisation functions
 """
-
+import sys
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
@@ -9,6 +9,97 @@ import statsmodels.formula.api as smf
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.stats.multitest import multipletests
 import scipy.stats as stats
+
+sys.path.insert(0, './lib')
+
+import utils_spectrogram
+    
+def point_wise_LME_spectrogram_within_severity(dataframe, feature_spectrogram, n_downsampling):
+    
+    X          = np.array(dataframe[feature_spectrogram].to_list())
+    X          = X.squeeze(axis=1)
+    not_nan_i  = ~np.isnan(X).any(axis=(1, 2))
+    X          = X[not_nan_i]
+
+    # get patients and spectrogram data
+    data       = np.array(X)
+    data       = utils_spectrogram.downsample_time_axis_for_spectrogram(data, target_time_points=n_downsampling)
+    patients   = dataframe.patient.to_list()
+    patients   = np.array(patients)[not_nan_i]
+
+    # Store p-values
+    n_subjects = data.shape[0]
+    n_freq     = data.shape[1]
+    n_time     = data.shape[2]
+    p_values   = np.zeros((n_freq, n_time))
+    z_scores   = np.zeros((n_freq, n_time))
+    
+    for f_i in range(n_freq):
+        for t_i in range(n_time):
+            
+            y  = data[:, f_i, t_i] # get all the points for the corresponding frequency x timepoint combination
+            df = pd.DataFrame({'voxel': y, 'patient': patients})
+            
+            try:
+                # Fit LME
+                model              = mixedlm("voxel ~ 1", df, groups=df["patient"])
+                result             = model.fit(reml=False)
+                p_values[f_i, t_i] = result.pvalues['Intercept']  # p-value for deviation from 0
+                z_scores[f_i, t_i] = result.tvalues['severity']
+            except Exception as e:
+                p_values[f_i, t_i] = 1
+                z_scores[f_i, t_i] = 0
+    
+        print(str(90-(f_i)) + " Hz is completed...")
+
+    # just in case any p value is np.nan
+    p_values[np.isnan(p_values)] = 1
+
+    return p_values
+
+def point_wise_LME_spectrogram_between_severity(dataframe, feature_spectrogram, n_downsampling):
+    
+    X          = np.array(dataframe[feature_spectrogram].to_list())
+    X          = X.squeeze(axis=1)
+    not_nan_i  = ~np.isnan(X).any(axis=(1, 2))
+    X          = X[not_nan_i]
+
+    # get patients and spectrogram data
+    data       = np.array(X)
+    data       = utils_spectrogram.downsample_time_axis_for_spectrogram(data, target_time_points=n_downsampling)
+    patients   = np.array(dataframe.patient.to_list())[not_nan_i]
+    severity   = np.array(dataframe.severity.to_list())[not_nan_i]
+
+    # Store p-values
+    n_subjects = data.shape[0]
+    n_freq     = data.shape[1]
+    n_time     = data.shape[2]
+    p_values   = np.zeros((n_freq, n_time))
+    z_scores   = np.zeros((n_freq, n_time)) 
+    
+    for f_i in range(n_freq):
+        for t_i in range(n_time):
+            
+            y  = data[:, f_i, t_i] # get all the points for the corresponding frequency x timepoint combination
+            df = pd.DataFrame({'voxel': y, 'patient': patients,'severity': severity})
+            
+            try:
+                # Fit LME
+                model              = mixedlm("voxel ~ severity", df, groups=df["patient"])
+                result             = model.fit(reml=False)
+                p_values[f_i, t_i] = result.pvalues['severity'] 
+                z_scores[f_i, t_i] = result.tvalues['severity']
+            except Exception as e:
+                p_values[f_i, t_i] = 1
+                z_scores[f_i, t_i] = 0
+    
+        print(str(90-(f_i)) + " Hz is completed...")
+
+    # just in case any p value is np.nan
+    p_values[np.isnan(p_values)] = 1
+
+    return p_values, z_scores
+    
 
 def set_up_mixedlm_with_interaction(dataset, response_variable, independent_variable, block_variable, random_effect, random_intercept, random_slope, REML_state):
     if((random_intercept==True) & (random_slope==False)):
@@ -304,62 +395,4 @@ def measure_adjusted_r2_in_grid_cells_for_frequency_bands(dataset, n_bins, frequ
             
 
 
-############################################################################################
-############################################################################################
-# PCA MODEL ################################################################################
-############################################################################################
-############################################################################################
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.metrics import calinski_harabasz_score
-
-def build_PCA_model(dataframe, features, label, n_components=5):
-
-    X                    = dataframe[features]
-    X_scaled             = StandardScaler().fit_transform(X)
-    X                    = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
-    Y                    = dataframe[label]
-
-    # apply PCA
-    pca                  = PCA(n_components=n_components)
-    principal_components = pca.fit_transform(X)
-
-    data_pca = pd.DataFrame()
-    for i in range(n_components):
-        data_pca["PC"+str(i+1)] = principal_components[:,i]
-    data_pca["severity"] = dataframe[label].to_list()
-
-    # get feature contributions and total explained variance for each principal axis
-    feature_contributions           = pca.components_.T * np.sqrt(pca.explained_variance_)
-    explained_variance              = pd.DataFrame()
-    explained_variance["component"] = data_pca.columns[0:-1].tolist()
-    explained_variance["score"]     = np.transpose(pca.explained_variance_ratio_)
-
-    pca_contributions = pd.DataFrame(feature_contributions, columns=data_pca.columns[0:-1].tolist(), index=X.columns).abs()
-
-    return data_pca, explained_variance, pca_contributions
-
-
-def ch_score(dataset_pca, group_label, group_mapping):
-
-    pca_features      = list(set(dataset_pca.columns).difference(set([group_label])))
-    X                 = dataset_pca[pca_features]
-    Y                 = dataset_pca[group_label]
-    
-    groups            = list(group_mapping.keys())
-    calinski_harabasz = np.zeros([len(groups), len(groups)])
-    
-    for i in range(len(groups)):
-        for j in range(len(groups)):
-            group1 = groups[i]
-            group2 = groups[j]
-            if(i!=j):
-                X_temp = X[(Y==group1) | (Y==group2)].values
-                labels = Y[(Y==group1) | (Y==group2)].map(group_mapping)
-                calinski_harabasz[i][j] = calinski_harabasz_score(X_temp, labels)
-            else:
-                calinski_harabasz[i][j] = 0
-    calinski_harabasz = pd.DataFrame(data=calinski_harabasz, columns=groups, index=groups)
-    
-    return calinski_harabasz

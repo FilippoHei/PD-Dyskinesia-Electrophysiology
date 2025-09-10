@@ -1,17 +1,20 @@
 """
-Utilisation function for plotting
+Utilisation function for time/frequency plotting
 """
 
 import numpy as np
 import pandas as pd
 from mne.time_frequency import tfr_array_morlet, tfr_array_multitaper
+from mne.stats import permutation_cluster_test
+from mne.stats.cluster_level import _setup_adjacency
+import mne
 
 # inserting the lib folder to the compiler
 import sys
 sys.path.insert(0, './lib')
 
 
-def measure_normalized_multitaper_spectrograms(dataset, fs, baseline_recordings):
+def measure_normalized_multitaper_spectrograms_for_channels(dataset, fs, baseline_recordings):
     
     df_TF = pd.DataFrame(columns=["patient","hemisphere","channel","severity","onset_aligned_normalized","offset_aligned_normalized"])
 
@@ -43,8 +46,10 @@ def measure_normalized_multitaper_spectrograms(dataset, fs, baseline_recordings)
                         offset_aligned = np.reshape(offset_aligned, (len(offset_aligned), 1, len(offset_aligned[0])))
                 
                         # get time-frequency representation of onset and offset aligned events
-                        onset_spectograms  = tfr_array_multitaper(onset_aligned , sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, freqs=np.linspace(4,90,87), output='power', verbose=False)
-                        offset_spectograms = tfr_array_multitaper(offset_aligned, sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, freqs=np.linspace(4,90,87), output='power', verbose=False)
+                        onset_spectograms  = tfr_array_multitaper(onset_aligned , sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, 
+                                                                  freqs=np.linspace(4,90,87), output='power', verbose=False)
+                        offset_spectograms = tfr_array_multitaper(offset_aligned, sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, 
+                                                                  freqs=np.linspace(4,90,87), output='power', verbose=False)
                         
                         onset_tfr_average  = np.nanmean(onset_spectograms, axis=0)[0]
                         offset_tfr_average = np.nanmean(offset_spectograms, axis=0)[0]
@@ -53,7 +58,8 @@ def measure_normalized_multitaper_spectrograms(dataset, fs, baseline_recordings)
                         channel_baseline   = baseline_recordings[patient][hemisphere][channel]
                         channel_baseline   = channel_baseline[~np.isnan(channel_baseline)] # remove np.nan elements
                         channel_baseline   = np.reshape(channel_baseline, (1,1, len(channel_baseline)))
-                        baseline_tfr       = tfr_array_multitaper(channel_baseline , sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, freqs=np.linspace(4,90,87), output='power', verbose=False)
+                        baseline_tfr       = tfr_array_multitaper(channel_baseline , sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, 
+                                                                  freqs=np.linspace(4,90,87), output='power', verbose=False)
                         baseline_tfr_avg   = np.mean(baseline_tfr, axis=3)[0][0]
                         baseline_tfr_avg   = baseline_tfr_avg[:, np.newaxis]  # shape (87, 1)
                         
@@ -71,6 +77,239 @@ def measure_normalized_multitaper_spectrograms(dataset, fs, baseline_recordings)
                     df_TF.loc[len(df_TF)]  = row
 
     return df_TF
+
+
+def measure_normalized_multitaper_spectrograms_for_taps(dataset, fs, baseline_recordings):
+    
+    df_TF = pd.DataFrame(columns=["patient","hemisphere","severity","event_no","onset_aligned_normalized","offset_aligned_normalized"])
+
+    for patient in list(dataset.patient.unique()): # iterate across patients
+        pat_hemispheres      = list(dataset[dataset.patient==patient].hemisphere.unique())
+
+        print ("Patient " + patient)
+        # measure TFR of each channel baseline for the selected patient
+        channel_baseline_tfr = measure_electrophysiological_channels_baseline_tfr(dataset, baseline_recordings, patient, fs)
+
+        print ("---> baseline TFR measurement is completed...")
+    
+        for hemisphere in pat_hemispheres: # iterate across patients, hemispheres
+            pat_severity = list(dataset[(dataset.patient==patient) & (dataset.hemisphere==hemisphere)].LID.unique())
+
+            for severity in pat_severity: # iterate across patients, hemispheres, dyskinesia severities
+                pat_taps = list(dataset[(dataset.patient==patient) & (dataset.hemisphere==hemisphere) & (dataset.LID==severity)].event_no.unique())
+                
+                for event_no in pat_taps: # iterate across patients, hemispheres, dyskinesia severities and taps
+
+                    print("------> " + hemisphere + " - " + severity + " - " + event_no)  
+
+                    event_LFPs        = dataset[(dataset.patient==patient) & (dataset.hemisphere==hemisphere) & (dataset.LID==severity) & (dataset.event_no==event_no)]
+                    event_LFPs_onset  = event_LFPs[event_LFPs.recording_onset_aligned.notna()]
+                    event_LFPs_offset = event_LFPs[event_LFPs.recording_offset_aligned.notna()]
+                    
+                    ############################################################
+                    # ONSET ALIGNED SPECTROGRAMS ###############################
+                    ############################################################
+                    
+                    if(len(event_LFPs_onset)!=0): # if the tapping activity has at least one valid onset aligned signal across channels
+                        onset_aligned      = list(event_LFPs_onset[event_LFPs_onset["recording_onset_aligned"].apply(lambda x: isinstance(x, list))].recording_onset_aligned)
+                        onset_aligned      = np.reshape(onset_aligned, (len(onset_aligned), 1, len(onset_aligned[0])))
+    
+                        # get time-frequency representation of onset aligned recordings across all channels for the same tapping event
+                        onset_spectograms  = tfr_array_multitaper(onset_aligned , sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, 
+                                                                  freqs=np.linspace(4,90,87), output='power', verbose=False)
+    
+                        # get channel-based normalized spectrograms of the same tapping event
+                        onset_spectograms_norm  = []
+    
+                        for i in range(len(event_LFPs_onset)):
+                            
+                            channel                = event_LFPs_onset.iloc[i].channel
+                            tap_onset_tfr_channel  = onset_spectograms[i]
+
+                            try:
+                                onset_tfr_norm         = normalize_event_spectogram_by_channel_baseline(tap_onset_tfr_channel, channel_baseline_tfr[hemisphere][channel], fs)
+                                onset_spectograms_norm.append(onset_tfr_norm)
+                            except KeyError as e:
+                                pass # the baseline of the channel does not have enough time points to get robust TFR
+
+                        onset_spectograms_norm = np.stack(onset_spectograms_norm)
+                        # measure the mean spectrogram per tapping event
+                        onset_tfr_average      = np.nanmean(onset_spectograms_norm, axis=0)[0]
+
+                    else:
+                        onset_tfr_average      = np.nan
+                    
+                    ################################################################### 
+                    # OFFSET ALIGNED SPECTROGRAMS ##################################### 
+                    ###################################################################  
+
+                    if(len(event_LFPs_offset)!=0): # if the tapping activity has at least one valid offset aligned signal across channels
+                        offset_aligned     = list(event_LFPs_offset[event_LFPs_offset["recording_offset_aligned"].apply(lambda x: isinstance(x, list))].recording_offset_aligned)
+                        offset_aligned     = np.reshape(offset_aligned, (len(offset_aligned), 1, len(offset_aligned[0])))
+    
+                        # get time-frequency representation of offset aligned recordings across all channels for the same tapping event
+                        offset_spectograms = tfr_array_multitaper(offset_aligned, sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, 
+                                                                  freqs=np.linspace(4,90,87), output='power', verbose=False)
+                        
+                        # get channel-based normalized spectrograms of the same tapping event
+                        offset_spectograms_norm = []
+                                    
+                        for i in range(len(event_LFPs_offset)):
+                            
+                            channel                = event_LFPs_offset.iloc[i].channel
+                            tap_offset_tfr_channel = offset_spectograms[i]
+                            
+                            try:
+                                offset_tfr_norm        = normalize_event_spectogram_by_channel_baseline(tap_offset_tfr_channel,channel_baseline_tfr[hemisphere][channel], fs)
+                                offset_spectograms_norm.append(offset_tfr_norm)
+                            except KeyError as e:
+                                pass # the baseline of the channel does not have enough time points to get robust TFR
+                                
+                        offset_spectograms_norm    = np.stack(offset_spectograms_norm)       
+                        # measure the mean spectrogram per tapping event
+                        offset_tfr_average         = np.nanmean(offset_spectograms_norm, axis=0)[0]
+                
+                    else:
+                        offset_tfr_average         = np.nan
+                
+        
+                    row                              = {}
+                    row["patient"]                   = patient
+                    row["hemisphere"]                = hemisphere
+                    row["severity"]                  = severity
+                    row["event_no"]                  = event_no
+                    row["onset_aligned_normalized"]  = onset_tfr_norm
+                    row["offset_aligned_normalized"] = offset_tfr_norm
+                    df_TF.loc[len(df_TF)]            = row
+
+    return df_TF
+
+def measure_electrophysiological_channels_baseline_tfr(dataset, baseline_recordings, patient, fs):
+
+    patient_channel_baseline_tfr = {key:{} for key in dataset[dataset.patient == patient].hemisphere.unique()} 
+    
+    for hemisphere in patient_channel_baseline_tfr.keys():
+        for channel in dataset[(dataset.patient == patient) & (dataset.hemisphere == hemisphere)].channel.unique():
+
+            channel_baseline  = baseline_recordings[patient][hemisphere][channel]
+            channel_baseline  = channel_baseline[~np.isnan(channel_baseline)] # remove np.nan elements
+            channel_baseline  = np.reshape(channel_baseline, (1,1, len(channel_baseline)))
+
+            try:
+                patient_channel_baseline_tfr[hemisphere][channel] = tfr_array_multitaper(channel_baseline , sfreq=fs, n_cycles=np.linspace(4,90,87) / 1, 
+                                                                                         freqs=np.linspace(4,90,87), output='power', verbose=False)
+            except:
+                # there is not enough signal length in the channel to measure robust TFR at baseline period
+                print (">> " + hemisphere + " hemisphere : " + channel + " channel is excluded!") 
+
+    return patient_channel_baseline_tfr
+
+def normalize_event_spectogram_by_channel_baseline(events_tfr, baseline_tfr, fs):
+    
+    # get average value for frequency
+    baseline_tfr_avg   = np.mean(baseline_tfr, axis=3)[0][0]
+    baseline_tfr_avg   = baseline_tfr_avg[:, np.newaxis]  # shape (87, 1)
+
+    # Normalize event spectrogram based on baseline spectrograms
+    events_tfr_norm    = ((events_tfr - baseline_tfr_avg) /  (baseline_tfr_avg)) * 100
+    return events_tfr_norm
+
+def get_patient_mean_spectrogram_for_LID_severity(dataset, alignment, severity, random_sampling=False, event_threshold=20):
+    
+    dataset_severity     = dataset[dataset.severity == severity]
+    patient_spectrograms = []
+
+
+    # without augmentation / original patient and severity-wise mean spectrograms
+    for patient, group_df in dataset_severity.groupby("patient"):  
+        
+        if(alignment=="onset"):
+            stacked = np.stack(group_df["onset_aligned_normalized"].values)
+        else:
+            stacked = np.stack(group_df["offset_aligned_normalized"].values)
+                
+        mean_spectrogram = stacked.mean(axis=0).squeeze()  # [freq, time]
+        patient_spectrograms.append(mean_spectrogram)
+
+    # with augmentation - within-patient bootstrapped sampling
+    if(random_sampling==True):
+
+        # setting seed for reproducibility
+        np.random.seed(0)  
+        
+        for patient, group_df in dataset_severity.groupby("patient"):
+            
+            # Select the aligned spectrograms
+            if alignment == "onset":
+                spectrograms = group_df["onset_aligned_normalized"].values
+            else:
+                spectrograms = group_df["offset_aligned_normalized"].values
+            
+            # stack into an array: [num_events, freq, time]
+            stacked  = np.stack(spectrograms)
+            n_events = stacked.shape[0]
+    
+            # If less than 10 events, skip
+            if n_events < event_threshold:
+                continue
+    
+            # number of bootstrap samples = floor(n_events / event_threshold)
+            n_samples = n_events // event_threshold 
+    
+            for _ in range(n_samples):
+                idx          = np.random.choice(n_events, size=int(event_threshold/2), replace=True)
+                sampled_mean = stacked[idx].mean(axis=0).squeeze()  # [time, freq]
+                patient_spectrograms.append(sampled_mean)
+
+    return np.stack(patient_spectrograms)
+
+def downsample_time_axis_for_spectrogram(spectrogram, target_time_points=256):
+    
+    # ensure the input data is in the shape [n_subjects, n_freqs, n_times]
+    if len(spectrogram.shape) != 3:
+        raise ValueError(f"input data must be a 3D array, but got shape {spectrogram.shape}")
+    
+    n_subjects, n_freqs, n_times = spectrogram.shape
+    
+    if target_time_points >= n_times:  # no downsampling needed if the target time points are greater or equal
+        return spectrogram  
+
+    # compute the downsampling factor
+    factor      = n_times // target_time_points
+    # reshape and mean-pool over the time axis
+    downsampled = spectrogram[:, :, :factor * target_time_points].reshape(n_subjects, n_freqs, target_time_points, factor).mean(axis=3)
+    
+    return downsampled
+
+def run_permutation_cluster_with_downsampling(group_A, group_B, target_time_points=256, n_permutations=1000, tail=0, n_jobs=1):
+
+    # check that both groups have the correct shape
+    if len(group_A.shape) != 3 or len(group_B.shape) != 3:
+        raise ValueError("Both groups must have shape [n_subjects, n_freqs, n_times]")
+
+    # downsample the time axis for both groups (downsampling from fs*4 to selected target_time_points
+    group_A_downsampled       = downsample_time_axis_for_spectrogram(group_A, target_time_points)
+    group_B_downsampled       = downsample_time_axis_for_spectrogram(group_B, target_time_points)
+    
+    # get the number of frequency bins and time points after downsampling
+    _, n_freqs, n_times       = group_A_downsampled.shape
+    
+    # compute the adjacency matrix for time-frequency data (2D adjacency)
+    adjacency                 = mne.stats.combine_adjacency(n_freqs, n_times)
+
+    # Reshape the data to (n_subjects, time * freq)
+    X_A                       = group_A_downsampled.reshape(group_A_downsampled.shape[0], -1)  # [n_subjects, time * freq]
+    X_B                       = group_B_downsampled.reshape(group_B_downsampled.shape[0], -1)  # [n_subjects, time * freq]
+
+    X                         = [X_A, X_B] # stack the groups
+    T_obs, clusters, pvals, _ = permutation_cluster_test(X, n_permutations=n_permutations, tail=tail, n_jobs=n_jobs, adjacency=adjacency)
+    T_obs                     = T_obs.reshape(n_freqs, n_times)
+
+    return T_obs, clusters, pvals
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
     
 def measure_TFR_for_patient_LFP_baseline(patient, baseline, fs):
 

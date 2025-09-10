@@ -79,12 +79,15 @@ def plot_mean_spectrogram(spectrogram, group, time_vector, cmap, vmin, vmax, axi
 
 def plot_permutation_clusters_on_spectrogram(F_stats, clusters, cluster_p_values, alpha, time_vector, cmap, vmax, axis):
 
-    significance_mask = np.nan * np.ones_like(F_stats)
+    # Initialize a significance mask (NaNs where non-significant)
+    significance_mask      = np.nan * np.ones_like(F_stats)
+    significance_mask_flat = significance_mask.flatten()
+
     for c, p_val in zip(clusters, cluster_p_values):
-        if (p_val <= alpha):
-            row_indices = c[0]  # Use c[0] for rows
-            col_indices = c[1]  # Use c[1] for columns
-            significance_mask[row_indices, col_indices] = F_stats[row_indices, col_indices]
+        if p_val <= alpha:  # Check if cluster is significant
+            significance_mask_flat[c[0]] = True
+
+    significance_mask      = significance_mask_flat.reshape(significance_mask.shape)
         
     freq_changed = []
     for x in np.arange(4, 91):
