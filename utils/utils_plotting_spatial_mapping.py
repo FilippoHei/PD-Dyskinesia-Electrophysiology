@@ -83,7 +83,7 @@ def map_electrophysiological_activity_to_anatomical_surface(grid_activity, mesh,
         # fit the RBF with grid points and values
         rbf = Rbf(grid_points[:, 0], grid_points[:, 1], grid_points[:, 2], values, function=function, epsilon=epsilon)
         # interpolate the values for the mesh points
-        mesh_activity.point_arrays[key] = rbf(mesh_points[:, 0], mesh_points[:, 1], mesh_points[:, 2])
+        mesh_activity.point_data[key] = rbf(mesh_points[:, 0], mesh_points[:, 1], mesh_points[:, 2])
     
     return mesh_activity
 
@@ -92,7 +92,7 @@ def plot_LFP_activity_distribution(stn_mesh, activity_mesh, feature, cmap="virid
     plotter = pv.Plotter()
 
     # Plot the stn mesh with the corresponding scalars and alpha values
-    plotter.add_mesh(stn_mesh, color='white', opacity=1, specular=5, specular_power=50)
+    plotter.add_mesh(stn_mesh, color='white', opacity=1, specular=.5, specular_power=50)
 
     # Define scalar values and transparency
     scalars = activity_mesh[feature]
@@ -111,7 +111,7 @@ def plot_cortical_activity_distribution(anatomical_structure_mesh, activity_mesh
 
     plotter = pv.Plotter()
 
-    plotter.add_mesh(anatomical_structure_mesh, color='dimgray', opacity=0.025, specular=5, specular_power=50)
+    plotter.add_mesh(anatomical_structure_mesh, color='dimgray', opacity=0.025, specular=.5, specular_power=50)
     
     # Define scalar values and transparency
     scalars = activity_mesh[feature]

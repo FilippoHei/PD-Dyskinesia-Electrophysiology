@@ -24,8 +24,8 @@ cortex_left  = cortex_mesh["left_hemisphere"]
 
 
 plotter      = pv.Plotter()
-plotter.add_mesh(cortex_right, color='dimgray', opacity=0.025, specular=5, specular_power=50)
-plotter.add_mesh(cortex_left, color='dimgray', opacity=0.025, specular=5, specular_power=50)
+plotter.add_mesh(cortex_right, color='dimgray', opacity=0.025, specular=.5, specular_power=50)
+plotter.add_mesh(cortex_left, color='dimgray', opacity=0.025, specular=.5, specular_power=50)
 
 patient_colors     = dict()
 patient_colors[8]  = "crimson"

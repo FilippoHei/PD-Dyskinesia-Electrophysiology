@@ -86,7 +86,7 @@ def extract_baseline_coherence_between_ECOG_LFP_channels():
     
                             Cxy_array = []
                             for i in range(len(ECOG_recording_segments)):
-                                f, Cxy = measure_absolute_coherence(ECOG_recording_segments[i][0], LFP_recording_segments[i][0])
+                                f, Cxy = measure_absolute_coherence(np.asarray(ECOG_recording_segments[i][0]), np.asarray(LFP_recording_segments[i][0]))
                                 Cxy_array.append(Cxy)
                         
 
@@ -145,8 +145,8 @@ def measure_LFP_ECOG_channel_pair_coherence(dataset_LFP, dataset_ECOG, baseline_
     for index, row in channel_events_LFP_ECOG.iterrows():
 
         try:
-            # pre_event coherence
-            f, event_coherence = measure_absolute_coherence(row.LFP_pre_event_recording, row.ECOG_pre_event_recording)
+            # pre_event coherence 
+            f, event_coherence = measure_absolute_coherence(np.asarray(row.LFP_pre_event_recording), np.asarray(row.ECOG_pre_event_recording))
             baseline_coherence = baseline_coherence_LFP_ECOG[(baseline_coherence_LFP_ECOG.patient==patient) & 
                                                              (baseline_coherence_LFP_ECOG.ECOG_hemisphere==hemisphere_ECOG) & 
                                                              (baseline_coherence_LFP_ECOG.LFP_hemisphere==hemisphere_LFP) & 
@@ -160,7 +160,7 @@ def measure_LFP_ECOG_channel_pair_coherence(dataset_LFP, dataset_ECOG, baseline_
 
         try:
     
-            f, event_coherence = measure_absolute_coherence(row.LFP_event_recording, row.ECOG_event_recording)
+            f, event_coherence = measure_absolute_coherence(np.asarray(row.LFP_event_recording), np.asarray(row.ECOG_event_recording))
             event_coherence    = event_coherence * (len(row.LFP_event_recording)/(fs*2)) # scaling of coherence based on event duration by 2 seconds
             
             #f, event_coherence = measure_absolute_coherence(row.LFP_event_recording, row.ECOG_event_recording)
@@ -179,7 +179,7 @@ def measure_LFP_ECOG_channel_pair_coherence(dataset_LFP, dataset_ECOG, baseline_
 
         try:
             # post_event coherence 
-            f, event_coherence = measure_absolute_coherence(row.LFP_post_event_recording, row.ECOG_post_event_recording)
+            f, event_coherence = measure_absolute_coherence(np.asarray(row.LFP_post_event_recording), np.asarray(row.ECOG_post_event_recording))
             baseline_coherence = baseline_coherence_LFP_ECOG[(baseline_coherence_LFP_ECOG.patient==patient) & 
                                                              (baseline_coherence_LFP_ECOG.ECOG_hemisphere==hemisphere_ECOG) & 
                                                              (baseline_coherence_LFP_ECOG.LFP_hemisphere==hemisphere_LFP) & 

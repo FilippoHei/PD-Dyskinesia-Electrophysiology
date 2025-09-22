@@ -289,7 +289,7 @@ class LFP:
 
         assert len(event_rec) == fs*4 , str(index)
     
-        return event_re
+        return event_rec
 
     @staticmethod
     def define_onset_aligned_recordings(dataset, fs, pad=False):

@@ -35,8 +35,8 @@ color_cortical_regions['Parietal cortex'] = "yellow"
 
 import pyvista as pv 
 plotter      = pv.Plotter()
-plotter.add_mesh(cortex_mesh["right_hemisphere"], color='dimgray', opacity=0.05, specular=5, specular_power=50)
-plotter.add_mesh(cortex_mesh["left_hemisphere"], color='dimgray', opacity=0.05, specular=5, specular_power=50)
+plotter.add_mesh(cortex_mesh["right_hemisphere"], color='dimgray', opacity=0.05, specular=.5, specular_power=50)
+plotter.add_mesh(cortex_mesh["left_hemisphere"], color='dimgray', opacity=0.05, specular=.5, specular_power=50)
 
 for index, row in MNI_ECoG_channels.iterrows():
     plotter.add_mesh(pv.Sphere(radius=1, center=[row.x, row.y, row.z]), color=color_cortical_regions[row.AAL3_cortex], smooth_shading=True)

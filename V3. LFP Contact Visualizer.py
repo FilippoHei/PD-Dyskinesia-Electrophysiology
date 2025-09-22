@@ -40,8 +40,8 @@ STN_mesh         = utils_io.load_STN_meshes()
 plotter = pv.Plotter()
 
 # Plot the cortex mesh with the corresponding scalars and alpha values
-plotter.add_mesh(STN_mesh["right_hemisphere"], color='dimgray', opacity=0.05, specular=10, specular_power=50)
-plotter.add_mesh(STN_mesh["left_hemisphere"], color='dimgray', opacity=0.05, specular=10, specular_power=50)
+plotter.add_mesh(STN_mesh["right_hemisphere"], color='dimgray', opacity=0.05, specular=.1, specular_power=50)
+plotter.add_mesh(STN_mesh["left_hemisphere"], color='dimgray', opacity=0.05, specular=.1, specular_power=50)
 plotter.background_color = "white"
 plotter.add_axes(line_width=5, labels_off=True)
 
