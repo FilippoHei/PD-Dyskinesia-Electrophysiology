@@ -1,12 +1,18 @@
 """
 Functions for computing debiased weighted phase lag index (wPLI) and phase slope index (PSI).
 """
+import os
 import numpy as np
 import pandas as pd
+import sys
 import math
 from mne_connectivity import spectral_connectivity_epochs, phase_slope_index
 from tqdm_joblib import tqdm_joblib
 from joblib import Parallel, delayed
+
+sys.path.insert(0, './utils/')
+from lib_data import DATA_IO
+import utils_io
 
 # Surrogate iteration function
 def surrogate_iteration(seed, data, sfreq, fmin, fmax):
@@ -87,7 +93,7 @@ def compute_wpli_psi(data, sfreq=2048, n_perm=1000, n_jobs=-1):
     return results
 
 
-def get_wPLI_psi(dataset_LFP, dataset_ECOG, condition, fs=2048, n_perm=1000):
+def get_wPLI_psi(dataset_LFP, dataset_ECOG, filename, condition, fs=2048, n_perm=1000, forceComputation=False):
     '''
     Compute debiased weighted phase lag index (wPLI) and phase slope index (PSI) between LFP and ECoG channel pairs across trials.
 
@@ -97,13 +103,29 @@ def get_wPLI_psi(dataset_LFP, dataset_ECOG, condition, fs=2048, n_perm=1000):
     Args:
         dataset_LFP (pd.DataFrame): DataFrame containing LFP event recordings and metadata.
         dataset_ECOG (pd.DataFrame): DataFrame containing ECoG event recordings and metadata.
+        filename (str): Filename to save the results DataFrame. Will be saved as a pickle file in ../events/coherence/.
         condition (str): Column name specifying which event recordings to use. Must be one of 'pre_event_recording', 'event_recording', or 'post_event_recording'.
         fs (int, optional): Sampling frequency in Hz. Default is 2048.
         n_perm (int, optional): Number of surrogate iterations for empirical p-value estimation. Default is 1000.
+        forceComputation (bool, optional): If True, forces computation even if the output file already exists. Default is False.
 
     Returns:
         Results: Dataframe containing patient/channel info, frequency bands, wPLI, p-values, and PSI for each LFP-ECoG pair.
     '''
+    
+    # If filename has an any folder paths or extensions, remove them
+    filename = os.path.basename(filename)
+    filename = os.path.splitext(filename)[0]
+    
+    # If the file already exists, skip computation
+    if os.path.exists(DATA_IO.path_events + f"coherence/{filename}.pkl"): 
+        if forceComputation:
+            print("File already exists. But running computation anyway due to forceComputation=True.")
+            print("File will be saved with an incremented filename if it already exists.")
+        else:
+            print("File already exists. Skipping computation.")
+            return        
+    
     Results = []
     for (patient, lfp_ch), group_lfp in dataset_LFP.groupby(["patient", "LFP_channel"]):
 
@@ -138,17 +160,17 @@ def get_wPLI_psi(dataset_LFP, dataset_ECOG, condition, fs=2048, n_perm=1000):
             target_len = math.floor(np.percentile(lengths, 10))  # 10th percentile keeps 90% of trials
 
             # Discard too-short trials and trim all remaining to target_len
-            arrays_lfp, arrays_ecog = [(lfp, ecog) for (lfp, ecog) in zip(arrays_lfp, arrays_ecog) if len(lfp) >= target_len and len(ecog) >= target_len]
+            arrays_lfp, arrays_ecog = zip(*[(lfp, ecog) for lfp, ecog in zip(arrays_lfp, arrays_ecog) if len(lfp) >= target_len and len(ecog) >= target_len])
             arrays_lfp = [a[:target_len] for a in arrays_lfp]
             arrays_ecog = [a[:target_len] for a in arrays_ecog]
 
             # ensure same number of epochs
-            assert(arrays_lfp.shape[0]==arrays_ecog.shape[0], f"Number of epochs do not match for patient {patient}, LFP {lfp_ch}, ECoG {ecog_ch}")
-            
-            if data.shape[0] != len(lengths)/2 or target_len != max(lengths):
-                print(f"Using {arrays_lfp.shape[0]} of {len(lengths)/2} tapping events with {target_len} samples ({int(1000*target_len/fs)} ms) out of originally {max(lengths)} for wPLI computation.")
+            assert len(arrays_lfp) == len(arrays_ecog), f"Number of epochs do not match for patient {patient}, LFP {lfp_ch}, ECoG {ecog_ch}"
+
+            if len(arrays_lfp) != len(lengths)//2 or target_len != max(lengths):
+                print(f"Using {len(arrays_lfp)} of {len(lengths)//2} tapping events with {target_len} samples ({int(1000*target_len/fs)} ms) out of originally {max(lengths)} samples for wPLI computation.")
             else:
-                print(f"Using {arrays_lfp.shape[0]} tapping events with {target_len} samples ({int(1000*target_len/fs)} ms) for wPLI computation.")
+                print(f"Using {len(arrays_lfp)} tapping events with {target_len} samples ({int(1000*target_len/fs)} ms) for wPLI computation.")
 
             # build data array (n_epochs, n_signals=2, n_times)
             data = np.stack([arrays_lfp, arrays_ecog], axis=1)
@@ -166,5 +188,7 @@ def get_wPLI_psi(dataset_LFP, dataset_ECOG, condition, fs=2048, n_perm=1000):
                 psi=out['psi'],
             ))
 
+    utils_io.save_wPLI_df(pd.DataFrame(Results), filename)
+    
     return pd.DataFrame(Results)
 

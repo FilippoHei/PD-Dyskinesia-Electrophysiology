@@ -1,6 +1,7 @@
 """
 Utility functions for plotting wPLI results on a cortical mesh.
 """
+import os
 import pandas as pd
 import numpy as np
 import sys
@@ -20,12 +21,15 @@ sys.path.insert(0, './utils/')
 import utils_io
 from lib_data import DATA_IO
 
-def plot_wPLI_on_cortex(dataframe, frequencyBand=None, onlyOneHemisphere=False):
+def plot_wPLI_on_cortex(dataframe, filename, frequencyBand=None, onlyOneHemisphere=False, safeFile=True, fixedCmap=None, cmap="viridis"):
     '''
     Args:
         dataframe (pd.DataFrame): DataFrame containing wPLI results.
+        filename (str): Base filename for saving screenshots. The actual filename will include the selected frequency band and hemisphere info.
         frequencyBand (str, optional): Frequency band to plot. Must be one of ['theta', 'alpha', 'beta_low', 'beta_high', 'gamma', 'gamma_III']. If None, a GUI will prompt the user to select a band.
         onlyOneHemisphere (bool, optional): If True, plot only the right hemisphere and mirror left hemisphere coordinates to the right. Default is False.
+        safeFile (bool, optional): If False, no screenshot will be saved. Default is True.
+        fixedCmap (np.ndarray, optional): If provided, use these steps for the color bar limits. Default is None (which uses automatic limits).
 
     Returns:
         None. Displays an interactive cortical plot.
@@ -107,6 +111,10 @@ def plot_wPLI_on_cortex(dataframe, frequencyBand=None, onlyOneHemisphere=False):
     # Extract coordinates and values for interpolation
     coords = band_df[["x", "y", "z"]].to_numpy()
     values = band_df[selected_band].to_numpy()
+    
+    # Omit missing values
+    coords = coords[~np.isnan(values),:]
+    values = values[~np.isnan(values)]
 
     # --- Step 3: Prepare PyVista cortical plot ---
     cortex_mesh  = utils_io.load_cortical_atlas_meshes()
@@ -116,8 +124,10 @@ def plot_wPLI_on_cortex(dataframe, frequencyBand=None, onlyOneHemisphere=False):
     # Merge both hemispheres into one for interpolation
     if onlyOneHemisphere:
         mesh_combined = cortex_right
+        filepathSuffix = "oneHemisphere"
     else:
         mesh_combined = cortex_right.merge(cortex_left)
+        filepathSuffix = "bothHemispheres"
     mesh_vertices = mesh_combined.points
 
     # Compute the distance of each cortical vertex to the nearest electrode and
@@ -136,15 +146,36 @@ def plot_wPLI_on_cortex(dataframe, frequencyBand=None, onlyOneHemisphere=False):
     mesh_combined["connectivity"] = values_interp
     mesh_smoothed = mesh_combined.smooth(n_iter=100, relaxation_factor=0.01)
 
-    # --- Step 5: Plot ---
-    plotter = BackgroundPlotter()
-    plotter.add_mesh(
-        mesh_smoothed, 
-        scalars="connectivity", 
-        cmap="viridis", 
-        opacity=1.0, 
-        smooth_shading=True, 
-    )
+    # --- Step 5: Plot ---    
+    root = tk.Tk()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    root.destroy()
+    
+    plotter = BackgroundPlotter(window_size=(screen_width, screen_height))
+    
+    if fixedCmap is None:
+        plotter.add_mesh(
+            mesh_smoothed, 
+            scalars="connectivity", 
+            cmap=cmap, 
+            opacity=1.0, 
+            smooth_shading=True,
+        )
+    else:
+            plotter.add_mesh(
+            mesh_smoothed, 
+            scalars="connectivity", 
+            cmap=cmap, 
+            opacity=1.0, 
+            smooth_shading=True, 
+            clim=(min(fixedCmap), max(fixedCmap)),  # custom color limits
+            scalar_bar_args={
+                "title": "connectivity",
+                "n_labels": len(fixedCmap),     # as of now BackgroundPlotter only supports a fixed number of labels
+                "fmt": "%.2f"      # tick label format
+            }
+        )
 
     # Overlay electrodes as spheres
     for idx, row in band_df[["x", "y", "z"]].iterrows():
@@ -157,7 +188,29 @@ def plot_wPLI_on_cortex(dataframe, frequencyBand=None, onlyOneHemisphere=False):
     
     plotter.view_vector((0, 0, 1))   # top view
     plotter.add_light(pv.Light(position=(0, 0, 1), color="white", intensity=0.6))
-    return plotter.show()
+    if onlyOneHemisphere:
+        plotter.camera.zoom(2.5)
+    else:
+        plotter.camera.zoom(1.5)
+    plotter.render()  # Force render update before screenshot
+    plotter.show()
+
+    # --- Step 6: Save screenshot of the plot ---
+    if safeFile:
+        # If filename has an any folder paths or extensions, remove them
+        filename = os.path.basename(filename)
+        filename = os.path.splitext(filename)[0]
+        if fixedCmap is not None:
+            screenshot_filepath = DATA_IO.path_figure + f"LFP-ECoG wPLI/{filename}_{filepathSuffix}_{selected_band}_{min(fixedCmap):.2f}-{max(fixedCmap):.2f}.png"
+        else:
+            screenshot_filepath = DATA_IO.path_figure + f"LFP-ECoG wPLI/{filename}_{filepathSuffix}_{selected_band}.png"
+        print(f"Saving screenshot to {screenshot_filepath}")
+        # Save screenshot with full screen size
+        plotter.screenshot(screenshot_filepath)
+    
+    plotter.app_window.showMaximized()
+
+    return
 
 
 # Helper function for user input
