@@ -161,5 +161,25 @@ def load_AAL3_files_for_cortical_parcellation():
     AAL3_labels = pd.read_csv(DATA_IO.path_atlas_cortical + "AAL3_labels.csv")
     return AAL3_image, AAL3_labels
 
+
+def save_wPLI_df(dataframe, filename):
+    '''
+    Save the wPLI DataFrame to a pickle file. If a file with the same name exists, increment the filename.
+    '''
+    # If filename has an any folder paths or extensions, remove them
+    filename = os.path.basename(filename)
+    filename = os.path.splitext(filename)[0]
     
-    
+    # Save results
+    base_path = DATA_IO.path_events + f"coherence/{filename}.pkl"
+    file_path = base_path
+    i = 2
+
+    # Check for existing file and increment filename
+    while os.path.exists(file_path):
+        file_path = DATA_IO.path_events + f"coherence/{filename} ({i}).pkl"
+        i += 1
+
+    # Save DataFrame
+    dataframe.to_pickle(file_path)
+    print(f"Results saved to {file_path}")

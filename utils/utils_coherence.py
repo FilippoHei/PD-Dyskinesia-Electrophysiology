@@ -8,6 +8,9 @@ import numpy as np
 import sys
 import pickle
 from scipy.ndimage import gaussian_filter1d
+from mne_connectivity import spectral_connectivity_epochs, phase_slope_index
+from tqdm_joblib import tqdm_joblib
+from joblib import Parallel, delayed
 
 # inserting the lib folder to the compiler
 sys.path.insert(0, './lib')
