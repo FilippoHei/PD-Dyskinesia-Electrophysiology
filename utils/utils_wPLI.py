@@ -132,7 +132,7 @@ def get_wPLI_psi(dataset_LFP, dataset_ECOG, filename, condition, fs=2048, n_perm
         # loop through each ECoG channel for this patient
         group_ecog_patient = dataset_ECOG[dataset_ECOG["patient"] == patient]
         for ecog_ch, group_ecog in group_ecog_patient.groupby("ECoG_channel"):
-            print(f"Computing wPLI and PSI during events for patient {patient}, LFP {lfp_ch}, ECoG {ecog_ch}")
+            print(f"Computing wPLI and PSI during {condition.replace('_', ' ')}s for patient {patient}, LFP {lfp_ch}, ECoG {ecog_ch}")
             # stack all tapping events for this patient + LFP channel
             # Make sure to only use events with the same laterality (i.e., ipsilateral) that occur in both event lists
             group_lfp = group_lfp[group_lfp["event_no"].isin(group_ecog["event_no"])]
